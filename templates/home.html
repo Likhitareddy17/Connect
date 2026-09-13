@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}CONNECT · Home{% endblock %}
+
+{% block content %}
+  <section class="hero">
+    <p class="eyebrow">CONNECT</p>
+    <h1>Today, return gently.</h1>
+  </section>
+
+  <section class="card guidance-card compact-guidance">
+    <div class="card-title">
+      <h2>Today's Guidance</h2>
+      <span>{{ guidance.tone }}</span>
+    </div>
+    <p class="daily-focus">{{ guidance.focus }}</p>
+    <div class="chips">
+      <span>{{ guidance.mood }}</span>
+      <span>{{ guidance.action.title }}</span>
+    </div>
+  </section>
+
+  <div class="pillar-grid">
+    <a class="pillar-card spiritual" href="{{ url_for('spiritual') }}">
+      <strong>Spiritual</strong>
+      <span>Today's deity, mantra, vrat</span>
+    </a>
+    <a class="pillar-card mental" href="{{ url_for('mental') }}">
+      <strong>Mental</strong>
+      <span>Breath and attention</span>
+    </a>
+    <a class="pillar-card emotional" href="{{ url_for('emotional') }}">
+      <strong>Emotional</strong>
+      <span>Mood and reflection</span>
+    </a>
+  </div>
+
+  <section class="section-head">
+    <h2>One grounding step</h2>
+    <span>{{ profile.daily_goal }}</span>
+  </section>
+  <div class="practice-list single-practice">
+    {% for practice in practices[:1] %}
+      <article class="practice-card">
+        <span class="practice-icon">{{ practice.icon }}</span>
+        <span>
+          <strong>{{ practice.title }}</strong>
+          <small>{{ practice.detail }}</small>
+        </span>
+      </article>
+    {% endfor %}
+  </div>
+{% endblock %}

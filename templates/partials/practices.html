@@ -1,0 +1,11 @@
+<div class="practice-list">
+  {% for practice in practices %}
+    <article class="practice-card">
+      <span class="practice-icon">{{ practice.icon }}</span>
+      <span>
+        <strong>{{ practice.title }}</strong>
+        <small>{{ practice.detail }}</small>
+      </span>
+    </article>
+  {% endfor %}
+</div>

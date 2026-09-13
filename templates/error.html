@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}CONNECT · {{ page_title }}{% endblock %}
+
+{% block content %}
+  <section class="hero">
+    <p class="eyebrow">CONNECT</p>
+    <h1>{{ page_title }}</h1>
+    <p class="soft-text">{{ message }}</p>
+  </section>
+  <a class="primary-btn inline-link" href="{{ url_for('home') }}">Return home</a>
+{% endblock %}

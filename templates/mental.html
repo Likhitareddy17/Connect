@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}CONNECT · Mental{% endblock %}
+
+{% block content %}
+  <section class="hero">
+    <p class="eyebrow">Mental</p>
+    <h1>A small reset for attention.</h1>
+    <p class="soft-text">A breath practice and a few grounding choices, without making calm feel like work.</p>
+  </section>
+
+  <section class="card">
+    <div class="card-title">
+      <h2>Pranayama Reset</h2>
+      <span id="breath-phase">ready</span>
+    </div>
+    <div class="breath-circle" id="breath-circle">
+      <strong id="breath-word">Begin</strong>
+      <small>4 quiet rounds</small>
+    </div>
+    <div class="button-row">
+      <button class="primary-btn" id="breath-start" type="button">Start</button>
+      <button class="soft-btn" id="breath-stop" type="button">Reset</button>
+    </div>
+    <p class="status-line" id="breath-status" aria-live="polite"></p>
+  </section>
+
+  <section class="section-head">
+    <h2>Mental grounding</h2>
+    <span>light support</span>
+  </section>
+  {% include "partials/practices.html" %}
+{% endblock %}

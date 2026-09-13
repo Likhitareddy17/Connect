@@ -1,0 +1,683 @@
+:root {
+  --bg: #f7f2ea;
+  --surface: #fffaf2;
+  --surface-soft: #f0e7d9;
+  --ink: #302a24;
+  --muted: #776d62;
+  --line: #dfd2c1;
+  --spiritual: #826844;
+  --mental: #56726b;
+  --emotional: #986d68;
+  --shadow: 0 18px 48px rgba(79, 63, 44, 0.13);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 50% -12%, rgba(237, 216, 177, 0.72), transparent 34rem),
+    linear-gradient(180deg, #fbf7ef 0%, var(--bg) 54%, #efe6d8 100%);
+  color: var(--ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: 0;
+}
+
+a { color: inherit; text-decoration: none; }
+button, select, textarea { font: inherit; }
+
+.app-shell {
+  width: min(100%, 840px);
+  margin: 0 auto;
+  padding: 18px 16px 96px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, #eed9bb, #fff8eb);
+  border: 1px solid rgba(130, 104, 68, 0.24);
+  color: var(--spiritual);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.brand strong {
+  display: block;
+  line-height: 1;
+}
+
+.brand small {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.goal-form select {
+  max-width: 132px;
+  min-height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 250, 242, 0.72);
+  color: var(--ink);
+  padding: 0 10px;
+}
+
+.hero {
+  padding: 22px 0 12px;
+}
+
+.eyebrow {
+  margin: 0 0 9px;
+  color: var(--spiritual);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2rem, 8vw, 3.4rem);
+  line-height: 1.05;
+  font-weight: 780;
+}
+
+h2 {
+  margin: 0;
+  font-size: 1.04rem;
+}
+
+.soft-text {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.card, .soft-panel {
+  border: 1px solid rgba(130, 104, 68, 0.18);
+  border-radius: 20px;
+  background: rgba(255, 250, 242, 0.84);
+  box-shadow: var(--shadow);
+  padding: 18px;
+  margin: 14px 0;
+  backdrop-filter: blur(18px);
+}
+
+.soft-panel {
+  box-shadow: none;
+  background: rgba(255, 250, 242, 0.54);
+}
+
+.guidance-card {
+  overflow: hidden;
+  position: relative;
+}
+
+.guidance-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 88% 8%, rgba(255, 226, 172, 0.48), transparent 8rem),
+    radial-gradient(circle at 7% 100%, rgba(168, 188, 177, 0.36), transparent 9rem);
+  pointer-events: none;
+}
+
+.guidance-card > * {
+  position: relative;
+}
+
+.compact-guidance {
+  margin-bottom: 18px;
+}
+
+.compact-guidance .daily-focus {
+  margin-bottom: 2px;
+  text-transform: capitalize;
+}
+
+.card-title, .section-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.card-title span, .section-head span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.daily-focus {
+  margin: 14px 0 8px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.5rem;
+  line-height: 1.25;
+}
+
+.chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.chips span {
+  border-radius: 999px;
+  background: rgba(130, 104, 68, 0.1);
+  color: #604a30;
+  padding: 7px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.section-head {
+  margin: 24px 0 10px;
+}
+
+.pillar-grid {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.pillar-card {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(255, 250, 242, 0.66);
+  min-height: 102px;
+}
+
+.pillar-card strong, .pillar-card span {
+  display: block;
+}
+
+.pillar-card span {
+  color: var(--muted);
+  margin-top: 5px;
+  line-height: 1.4;
+}
+
+.spiritual { border-left: 4px solid var(--spiritual); }
+.mental { border-left: 4px solid var(--mental); }
+.emotional { border-left: 4px solid var(--emotional); }
+
+.practice-list {
+  display: grid;
+  gap: 10px;
+}
+
+.practice-card {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(130, 104, 68, 0.13);
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.practice-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex: 0 0 34px;
+  display: grid;
+  place-items: center;
+  background: rgba(130, 104, 68, 0.12);
+  color: var(--spiritual);
+  font-size: 0.76rem;
+}
+
+.practice-card strong, .practice-card small {
+  display: block;
+}
+
+.practice-card small {
+  color: var(--muted);
+  line-height: 1.38;
+  margin-top: 3px;
+}
+
+details summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+details p {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.deity-hero {
+  min-height: 190px;
+  display: grid;
+  align-content: end;
+  padding-bottom: 26px;
+}
+
+.deity-hero h1 {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.deity-card,
+.mantra-card,
+.vrat-card,
+.panchang-card {
+  border-color: rgba(130, 104, 68, 0.24);
+}
+
+.panchang-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.panchang-grid div {
+  padding: 12px;
+  border-radius: 15px;
+  border: 1px solid rgba(130, 104, 68, 0.13);
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.panchang-grid strong,
+.panchang-grid span {
+  display: block;
+}
+
+.panchang-grid strong {
+  font-size: 0.78rem;
+  color: var(--spiritual);
+  text-transform: uppercase;
+}
+
+.panchang-grid span {
+  margin-top: 5px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.source-note {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.mantra-sanskrit {
+  margin: 16px 0 2px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.9rem, 11vw, 3.8rem);
+  line-height: 1.1;
+  color: var(--spiritual);
+}
+
+.jaap-counter {
+  display: grid;
+  grid-template-columns: 52px 1fr 52px;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 16px;
+}
+
+.round-btn {
+  width: 52px;
+  height: 52px;
+  border: 1px solid rgba(130, 104, 68, 0.25);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--spiritual);
+  font-size: 1.45rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.jaap-count {
+  min-height: 96px;
+  border-radius: 22px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 226, 172, 0.5), transparent 70%),
+    rgba(130, 104, 68, 0.09);
+  border: 1px solid rgba(130, 104, 68, 0.15);
+}
+
+.jaap-count strong {
+  font-size: 2.8rem;
+  line-height: 1;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.jaap-count span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin-top: 6px;
+}
+
+.ritual-list {
+  margin: 14px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+}
+
+.ritual-list li {
+  margin: 10px 0;
+  line-height: 1.5;
+}
+
+.festival-note {
+  padding-top: 12px;
+  border-top: 1px solid rgba(130, 104, 68, 0.14);
+}
+
+.festival-note:first-of-type {
+  border-top: 0;
+}
+
+.festival-note p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.breath-circle {
+  width: 190px;
+  height: 190px;
+  margin: 22px auto;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: #fffaf2;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.18), transparent 54%),
+    linear-gradient(145deg, var(--mental), var(--spiritual));
+  box-shadow: 0 18px 60px rgba(86, 114, 107, 0.25);
+  transition: transform 4s ease;
+}
+
+.breath-circle.expand {
+  transform: scale(1.14);
+}
+
+.breath-circle strong, .breath-circle small {
+  display: block;
+}
+
+.breath-circle small {
+  margin-top: 8px;
+  opacity: 0.8;
+}
+
+.button-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.primary-btn, .soft-btn {
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.primary-btn {
+  color: #fffaf2;
+  background: linear-gradient(135deg, var(--spiritual), var(--emotional));
+}
+
+.soft-btn {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid var(--line);
+}
+
+.status-line {
+  min-height: 22px;
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.status-line.error {
+  color: #9b3d35;
+}
+
+.inline-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.journal-form {
+  display: grid;
+  gap: 14px;
+}
+
+.mood-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.mood-pill {
+  min-height: 54px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.48);
+  font-weight: 760;
+  cursor: pointer;
+}
+
+.mood-pill input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mood-pill.active {
+  border-color: var(--emotional);
+  background: rgba(152, 109, 104, 0.16);
+}
+
+.field-label {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+textarea {
+  width: 100%;
+  min-height: 138px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.56);
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+.history-item {
+  border-top: 1px solid rgba(130, 104, 68, 0.14);
+  padding: 12px 0;
+}
+
+.history-item:first-of-type {
+  border-top: 0;
+}
+
+.history-item p {
+  color: var(--muted);
+  line-height: 1.42;
+}
+
+.history-item small {
+  color: var(--muted);
+}
+
+.bottom-nav {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  width: min(calc(100% - 28px), 720px);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  padding: 7px;
+  border-radius: 24px;
+  background: rgba(255, 250, 242, 0.91);
+  border: 1px solid rgba(130, 104, 68, 0.18);
+  box-shadow: 0 14px 42px rgba(79, 63, 44, 0.18);
+  backdrop-filter: blur(18px);
+}
+
+.bottom-nav a {
+  min-height: 48px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.bottom-nav a.active {
+  color: var(--ink);
+  background: rgba(130, 104, 68, 0.12);
+}
+
+@media (min-width: 720px) {
+  .app-shell {
+    padding-inline: 24px;
+  }
+
+  .pillar-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .mood-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .panchang-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── Auth ────────────────────────────────────────────────────────────────── */
+.auth-hero {
+  padding-bottom: 6px;
+}
+
+.auth-form {
+  display: grid;
+  gap: 12px;
+  max-width: 480px;
+}
+
+.auth-form input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0 14px;
+  background: rgba(255, 255, 255, 0.56);
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.auth-form input:focus {
+  outline: 2px solid var(--spiritual);
+  outline-offset: 1px;
+}
+
+.form-error {
+  background: rgba(155, 61, 53, 0.1);
+  border: 1px solid rgba(155, 61, 53, 0.3);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #9b3d35;
+  font-size: 0.88rem;
+}
+
+.auth-switch {
+  color: var(--muted);
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+.auth-switch a {
+  color: var(--spiritual);
+  font-weight: 700;
+}
+
+/* ── Topbar enhancements ─────────────────────────────────────────────────── */
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar-link {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--spiritual);
+}
+
+.topbar-link.muted {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* ── Dashboard ───────────────────────────────────────────────────────────── */
+.profile-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.profile-form input,
+.profile-form select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0 14px;
+  background: rgba(255, 255, 255, 0.56);
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.profile-form select {
+  appearance: none;
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23776d62' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+}

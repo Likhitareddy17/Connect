@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="{% block meta_description %}CONNECT is a calm space for spiritual, mental, and emotional well-being.{% endblock %}">
+  <title>{% block title %}CONNECT{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="{{ url_for('home') }}" aria-label="CONNECT home">
+        <span class="brand-mark">om</span>
+        <span>
+          <strong>CONNECT</strong>
+          <small>spiritual · mental · emotional</small>
+        </span>
+      </a>
+      {% if current_user.is_authenticated %}
+      <div class="topbar-right">
+        <a href="{{ url_for('dashboard') }}" class="topbar-link">Dashboard</a>
+        <form method="post" action="{{ url_for('settings') }}" class="goal-form">
+          <select name="daily_goal" onchange="this.form.submit()" aria-label="Daily goal">
+            {% for goal in ['grounding','clarity','energy','gratitude'] %}
+              <option value="{{ goal }}" {% if current_user.daily_goal == goal %}selected{% endif %}>{{ goal }}</option>
+            {% endfor %}
+          </select>
+        </form>
+        <a href="{{ url_for('logout') }}" class="topbar-link muted">Sign out</a>
+      </div>
+      {% endif %}
+    </header>
+
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  {% if current_user.is_authenticated %}
+  <nav class="bottom-nav" aria-label="Primary">
+    <a href="{{ url_for('home') }}" class="{% if request.endpoint == 'home' %}active{% endif %}">Home</a>
+    <a href="{{ url_for('spiritual') }}" class="{% if request.endpoint == 'spiritual' %}active{% endif %}">Spirit</a>
+    <a href="{{ url_for('mental') }}" class="{% if request.endpoint == 'mental' %}active{% endif %}">Mental</a>
+    <a href="{{ url_for('emotional') }}" class="{% if request.endpoint == 'emotional' %}active{% endif %}">Emotion</a>
+  </nav>
+  {% endif %}
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: connect-app
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --workers 2 --bind 0.0.0.0:$PORT --timeout 60
+    envVars:
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: MYSQL_HOST
+        sync: false
+      - key: MYSQL_PORT
+        value: 3306
+      - key: MYSQL_USER
+        sync: false
+      - key: MYSQL_PASSWORD
+        sync: false
+      - key: MYSQL_DATABASE
+        value: connect_mvp
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: PROKERALA_CLIENT_ID
+        sync: false
+      - key: PROKERALA_CLIENT_SECRET
+        sync: false

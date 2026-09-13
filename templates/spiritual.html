@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+
+{% block title %}CONNECT · Spiritual{% endblock %}
+
+{% block content %}
+  <section class="hero deity-hero">
+    <p class="eyebrow">{{ religion_label }}</p>
+    <h1 id="sp-headline">{{ daily.headline }}</h1>
+    <p class="soft-text" id="sp-calendar-label">{{ daily.calendar_label }}</p>
+  </section>
+
+  <div class="spiritual-layout" style="display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; align-items: start;">
+
+    <!-- Main religion-specific content, re-rendered on every date click -->
+    <div id="sp-main-content" style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <!-- filled by renderDay() on load -->
+    </div>
+
+    <!-- Calendar + upcoming, top-right -->
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <section class="card" id="sp-calendar-card">
+        <div class="card-title">
+          <h2 id="sp-cal-month-label">Calendar</h2>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem;">
+          <button class="round-btn" id="sp-cal-prev" type="button" aria-label="Previous month">‹</button>
+          <strong id="sp-cal-title"></strong>
+          <button class="round-btn" id="sp-cal-next" type="button" aria-label="Next month">›</button>
+        </div>
+        <div id="sp-cal-grid" style="display:grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align:center; font-size: 0.8rem;"></div>
+      </section>
+
+      <section class="card">
+        <div class="card-title"><h2>Upcoming</h2></div>
+        <ul class="ritual-list" id="sp-upcoming-list">
+          {% for item in upcoming %}
+            <li><strong>{{ item.date }}</strong> — {{ item.name }}</li>
+          {% else %}
+            <li>Nothing curated yet for the period ahead.</li>
+          {% endfor %}
+        </ul>
+      </section>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const RELIGION = {{ religion | tojson }};
+const JAAP_SAVE_URL = {{ url_for('spiritual_jaap') | tojson }};
+const DAY_API_URL = {{ url_for('api_spiritual_day') | tojson }};
+let currentDaily = {{ daily | tojson }};
+let currentJaapCount = {{ jaap_count | tojson }};
+let calMonth; // Date object, first of the month currently shown
+
+function escapeHtml(s) {
+  return (s || "").toString().replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function renderOccasionBanner(daily) {
+  if (!daily.occasion) return "";
+  return `<section class="card">
+    <div class="card-title"><h2>${escapeHtml(daily.occasion.name)}</h2>
+    <span>${daily.occasion.is_major ? "major occasion" : "note"}</span></div>
+  </section>`;
+}
+
+function renderGuidance(daily) {
+  const steps = (daily.guidance_steps || []).map(s => `<li>${escapeHtml(s)}</li>`).join("");
+  return `<section class="card">
+    <div class="card-title"><h2>${escapeHtml(daily.guidance_title)}</h2></div>
+    <ul class="ritual-list">${steps}</ul>
+  </section>`;
+}
+
+function renderHindu(daily, jaapCount) {
+  const extra = daily.extra;
+  const p = extra.panchangam || {};
+  const fastHow = (extra.fast?.how || []).map(i => `<li>${escapeHtml(i)}</li>`).join("");
+  const fastBreak = (extra.fast?.["break"] || []).map(i => `<li>${escapeHtml(i)}</li>`).join("");
+  const festivals = (extra.festivals || []).map(f =>
+    `<article class="festival-note"><strong>${escapeHtml(f.name)}</strong><p>${escapeHtml(f.detail)}</p></article>`
+  ).join("");
+
+  return `
+    <section class="card panchang-card">
+      <div class="card-title"><h2>Panchangam</h2><span>${escapeHtml(p.location || "")}</span></div>
+      <div class="panchang-grid">
+        <div><strong>Vara</strong><span>${escapeHtml(p.weekday)}</span></div>
+        <div><strong>Tithi</strong><span>${escapeHtml(p.tithi)}</span></div>
+        <div><strong>Nakshatra</strong><span>${escapeHtml(p.nakshatra)}</span></div>
+        <div><strong>Yoga</strong><span>${escapeHtml(p.yoga)}</span></div>
+        <div><strong>Karana</strong><span>${escapeHtml(p.karana)}</span></div>
+        <div><strong>Lunar month</strong><span>${escapeHtml(p.lunar_month)}</span></div>
+        <div><strong>Sunrise</strong><span>${escapeHtml(p.sunrise)}</span></div>
+        <div><strong>Sunset</strong><span>${escapeHtml(p.sunset)}</span></div>
+        <div><strong>Rahu Kalam</strong><span>${escapeHtml(p.rahu_kalam)}</span></div>
+        <div><strong>Abhijit</strong><span>${escapeHtml(p.abhijit_muhurat)}</span></div>
+      </div>
+      <p class="source-note">${escapeHtml(p.source_note)}</p>
+    </section>
+
+    <section class="card mantra-card" id="mantra-card" data-mantra="${escapeHtml(extra.audio_text)}" data-save-url="${JAAP_SAVE_URL}">
+      <div class="card-title"><h2>Mantra for ${escapeHtml(extra.deity)}</h2><span>jaap</span></div>
+      <p class="mantra-sanskrit">${escapeHtml(extra.mantra_sanskrit)}</p>
+      <p class="daily-focus">${escapeHtml(extra.mantra)}</p>
+      <p class="soft-text">${escapeHtml(extra.meaning)}</p>
+
+      <div class="jaap-counter" aria-live="polite">
+        <button class="round-btn" id="jaap-minus" type="button" aria-label="Decrease count">-</button>
+        <div class="jaap-count"><strong id="jaap-count">${jaapCount}</strong><span>chants today</span></div>
+        <button class="round-btn" id="jaap-plus" type="button" aria-label="Increase count">+</button>
+      </div>
+
+      <div class="button-row">
+        <button class="primary-btn" id="mantra-audio" type="button">Play mantra</button>
+        <button class="soft-btn" id="jaap-voice" type="button">🎙️ Start voice counting</button>
+        <button class="soft-btn" id="jaap-reset" type="button">Reset count</button>
+      </div>
+      <p class="status-line" id="jaap-status" aria-live="polite"></p>
+    </section>
+
+    <section class="card vrat-card">
+      <div class="card-title"><h2>${escapeHtml(extra.fast?.name)}</h2>
+      <span>${extra.fast?.observed ? "observed today" : "daily note"}</span></div>
+      <p class="soft-text">${escapeHtml(extra.fast?.summary)}</p>
+    </section>
+
+    <details class="soft-panel" open>
+      <summary>How to observe</summary>
+      <ul class="ritual-list">${fastHow}</ul>
+    </details>
+    <details class="soft-panel">
+      <summary>When and how to break it</summary>
+      <ul class="ritual-list">${fastBreak}</ul>
+    </details>
+    ${festivals ? `<section class="soft-panel"><h2>Festival notes</h2>${festivals}</section>` : ""}
+    <details class="soft-panel"><summary>Spiritual meaning</summary><p>${escapeHtml(extra.depth)}</p></details>
+  `;
+}
+
+function renderIslam(daily) {
+  const t = daily.extra.timings || {};
+  const rows = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"]
+    .map(k => `<div><strong>${k}</strong><span>${escapeHtml(t[k] || "—")}</span></div>`).join("");
+  return `
+    <section class="card panchang-card">
+      <div class="card-title"><h2>Prayer times</h2><span>${escapeHtml(daily.calendar_label)}</span></div>
+      <div class="panchang-grid">${rows}</div>
+      <p class="source-note">${escapeHtml(daily.extra.source_note)}</p>
+    </section>
+    ${renderOccasionBanner(daily)}
+    ${renderGuidance(daily)}
+  `;
+}
+
+function renderChristianity(daily) {
+  return `
+    <section class="card">
+      <div class="card-title"><h2>Liturgical season</h2><span>${escapeHtml(daily.extra.season)}</span></div>
+      <p class="soft-text">${escapeHtml(daily.extra.reflection)}</p>
+      <p class="source-note">${escapeHtml(daily.extra.source_note)}</p>
+    </section>
+    ${renderOccasionBanner(daily)}
+    ${renderGuidance(daily)}
+  `;
+}
+
+function renderSikh(daily) {
+  return `
+    ${renderOccasionBanner(daily)}
+    ${renderGuidance(daily)}
+    <p class="source-note" style="padding: 0 0.5rem;">${escapeHtml(daily.extra.source_note || "")}</p>
+  `;
+}
+
+function renderAtheist(daily) {
+  return `
+    ${renderOccasionBanner(daily)}
+    ${renderGuidance(daily)}
+  `;
+}
+
+function renderDay(daily, jaapCount) {
+  currentDaily = daily;
+  currentJaapCount = jaapCount || 0;
+  document.getElementById("sp-headline").textContent = daily.headline;
+  document.getElementById("sp-calendar-label").textContent = daily.calendar_label || "";
+
+  const main = document.getElementById("sp-main-content");
+  if (daily.religion === "hindu") main.innerHTML = renderHindu(daily, currentJaapCount);
+  else if (daily.religion === "islam") main.innerHTML = renderIslam(daily);
+  else if (daily.religion === "christianity") main.innerHTML = renderChristianity(daily);
+  else if (daily.religion === "sikh") main.innerHTML = renderSikh(daily);
+  else main.innerHTML = renderAtheist(daily);
+
+  if (daily.religion === "hindu") wireJaapControls();
+}
+
+async function loadDay(isoDate) {
+  try {
+    const res = await fetch(`${DAY_API_URL}?date=${isoDate}`);
+    if (!res.ok) throw new Error("Failed to load day");
+    const data = await res.json();
+    renderDay(data.daily, data.jaap_count);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// ── Jaap controls (manual + and voice) — Hindu only ────────────────────────
+
+function wireJaapControls() {
+  const card = document.getElementById("mantra-card");
+  const countEl = document.getElementById("jaap-count");
+  const statusEl = document.getElementById("jaap-status");
+  const audioBtn = document.getElementById("mantra-audio");
+  let saveTimer = null;
+
+  function saveCount(count) {
+    clearTimeout(saveTimer);
+    statusEl.textContent = "Saving count...";
+    saveTimer = setTimeout(() => {
+      fetch(card.dataset.saveUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count }),
+      })
+        .then(r => { if (!r.ok) throw new Error("save failed"); return r.json(); })
+        .then(() => { statusEl.textContent = "Saved."; })
+        .catch(() => { statusEl.textContent = "Count not saved. Please try again."; });
+    }, 400);
+  }
+
+  function setCount(next) {
+    const count = Math.max(0, next);
+    countEl.textContent = count;
+    saveCount(count);
+  }
+
+  document.getElementById("jaap-plus").addEventListener("click", () => setCount(parseInt(countEl.textContent, 10) + 1));
+  document.getElementById("jaap-minus").addEventListener("click", () => setCount(parseInt(countEl.textContent, 10) - 1));
+  document.getElementById("jaap-reset").addEventListener("click", () => setCount(0));
+
+  audioBtn.addEventListener("click", () => {
+    if (!("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    const chant = new SpeechSynthesisUtterance(card.dataset.mantra);
+    chant.rate = 0.72;
+    chant.pitch = 0.92;
+    window.speechSynthesis.speak(chant);
+  });
+
+  // Voice-based counting: fuzzy-match spoken words against the mantra text.
+  const voiceBtn = document.getElementById("jaap-voice");
+  const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognitionCtor) {
+    voiceBtn.disabled = true;
+    voiceBtn.textContent = "Voice counting not supported in this browser";
+    return;
+  }
+
+  function normalize(s) {
+    return (s || "").toLowerCase().replace(/[^a-z\s]/g, " ").replace(/\s+/g, " ").trim();
+  }
+  function matchScore(transcript, target) {
+    const heard = new Set(normalize(transcript).split(" ").filter(Boolean));
+    const words = normalize(target).split(" ").filter(Boolean);
+    if (!words.length) return 0;
+    let hits = 0;
+    words.forEach(w => { if (heard.has(w)) hits += 1; });
+    return hits / words.length;
+  }
+
+  const recognizer = new SpeechRecognitionCtor();
+  recognizer.continuous = true;
+  recognizer.interimResults = false;
+  recognizer.lang = "en-US"; // transliterated mantra text is matched as English words
+
+  let listening = false;
+  recognizer.onresult = (event) => {
+    const last = event.results[event.results.length - 1];
+    if (!last.isFinal) return;
+    const transcript = last[0].transcript;
+    const score = matchScore(transcript, card.dataset.mantra);
+    if (score >= 0.6) {
+      setCount(parseInt(countEl.textContent, 10) + 1);
+      statusEl.textContent = "Heard the mantra — counted.";
+    }
+  };
+  recognizer.onerror = (e) => {
+    statusEl.textContent = "Voice recognition error: " + e.error;
+  };
+  recognizer.onend = () => {
+    if (listening) recognizer.start(); // keep listening until the user stops it
+  };
+
+  voiceBtn.addEventListener("click", () => {
+    if (!listening) {
+      listening = true;
+      recognizer.start();
+      voiceBtn.textContent = "⏹️ Stop voice counting";
+      statusEl.textContent = "Listening for the mantra...";
+    } else {
+      listening = false;
+      recognizer.stop();
+      voiceBtn.textContent = "🎙️ Start voice counting";
+      statusEl.textContent = "";
+    }
+  });
+}
+
+// ── Calendar ────────────────────────────────────────────────────────────
+
+function pad(n) { return n.toString().padStart(2, "0"); }
+function isoOf(y, m, d) { return `${y}-${pad(m + 1)}-${pad(d)}`; }
+
+function renderCalendar() {
+  const y = calMonth.getFullYear();
+  const m = calMonth.getMonth();
+  document.getElementById("sp-cal-title").textContent = calMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+  const grid = document.getElementById("sp-cal-grid");
+  grid.innerHTML = "";
+  ["S","M","T","W","T","F","S"].forEach(d => {
+    const el = document.createElement("div");
+    el.textContent = d;
+    el.style.fontWeight = "600";
+    el.style.color = "#a09288";
+    grid.appendChild(el);
+  });
+
+  const firstWeekday = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const todayIso = new Date().toISOString().slice(0, 10);
+
+  for (let i = 0; i < firstWeekday; i++) grid.appendChild(document.createElement("div"));
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const iso = isoOf(y, m, d);
+    const cell = document.createElement("button");
+    cell.type = "button";
+    cell.textContent = d;
+    cell.style.padding = "0.4rem 0";
+    cell.style.border = "1px solid #e1dbd6";
+    cell.style.borderRadius = "6px";
+    cell.style.background = iso === todayIso ? "#8c6d62" : "#ffffff";
+    cell.style.color = iso === todayIso ? "#ffffff" : "#332a28";
+    cell.style.cursor = "pointer";
+    cell.addEventListener("click", () => loadDay(iso));
+    grid.appendChild(cell);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  renderDay(currentDaily, currentJaapCount);
+  calMonth = new Date();
+  calMonth.setDate(1);
+  renderCalendar();
+  document.getElementById("sp-cal-prev").addEventListener("click", () => {
+    calMonth.setMonth(calMonth.getMonth() - 1);
+    renderCalendar();
+  });
+  document.getElementById("sp-cal-next").addEventListener("click", () => {
+    calMonth.setMonth(calMonth.getMonth() + 1);
+    renderCalendar();
+  });
+});
+</script>
+{% endblock %}

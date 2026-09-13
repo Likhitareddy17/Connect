@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}CONNECT · Dashboard{% endblock %}
+
+{% block content %}
+  <section class="hero">
+    <p class="eyebrow">Dashboard</p>
+    <h1>Your mood trends.</h1>
+    <p class="soft-text">The last 7 days, at a glance.</p>
+  </section>
+
+  <section class="card">
+    <div class="card-title">
+      <h2>Mood over time</h2>
+      <span>7 days</span>
+    </div>
+    <canvas id="mood-chart" height="220" aria-label="Mood trend chart" role="img"></canvas>
+    <p class="soft-text" id="mood-chart-empty" style="display:none; text-align:center; padding: 2rem 0;"></p>
+  </section>
+
+  <section class="card">
+    <div class="card-title">
+      <h2>Mood breakdown</h2>
+      <span>totals</span>
+    </div>
+    <canvas id="mood-pie" height="220" aria-label="Mood breakdown chart" role="img"></canvas>
+    <p class="soft-text" id="mood-pie-empty" style="display:none; text-align:center; padding: 2rem 0;"></p>
+  </section>
+
+  <section class="card">
+    <div class="card-title">
+      <h2>Your profile</h2>
+      <span>settings</span>
+    </div>
+    <form method="post" action="{{ url_for('settings') }}" class="profile-form">
+      <label class="field-label" for="display_name_input">Display name</label>
+      <input id="display_name_input" type="text" name="display_name"
+             value="{{ current_user.display_name }}" placeholder="Friend">
+
+      <label class="field-label" for="goal_select">Daily goal</label>
+      <select id="goal_select" name="daily_goal">
+        {% for goal in ['grounding','clarity','energy','gratitude'] %}
+          <option value="{{ goal }}" {% if current_user.daily_goal == goal %}selected{% endif %}>{{ goal }}</option>
+        {% endfor %}
+      </select>
+
+      <label class="field-label" for="religion_select">Religion / spiritual practice</label>
+      <select id="religion_select" name="religion">
+        {% for key, label in {'hindu':'Hinduism','islam':'Islam','christianity':'Christianity','sikh':'Sikhism','atheist':'Atheist / no religion'}.items() %}
+          <option value="{{ key }}" {% if current_user.religion == key %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+
+      <button class="primary-btn" type="submit">Save</button>
+    </form>
+  </section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+const raw = {{ history | tojson }};
+
+// Generate labels for the last 7 days
+const today = new Date();
+const labels = [];
+for (let i = 6; i >= 0; i--) {
+  const d = new Date(today);
+  d.setDate(today.getDate() - i);
+  labels.push(d.toISOString().slice(0, 10));
+}
+
+const MOODS = ['calm', 'stressed', 'overwhelmed', 'grateful', 'low-energy'];
+const COLORS = {
+  calm: 'rgba(86,114,107,0.85)',
+  stressed: 'rgba(152,109,104,0.85)',
+  overwhelmed: 'rgba(180,80,60,0.85)',
+  grateful: 'rgba(130,104,68,0.85)',
+  'low-energy': 'rgba(119,109,98,0.85)',
+};
+
+const byDay = {};
+raw.forEach(row => {
+  const key = new Date(row.day).toISOString().slice(0, 10);
+  if (!byDay[key]) byDay[key] = {};
+  byDay[key][row.mood] = row.count;
+});
+
+const datasets = MOODS.map(mood => ({
+  label: mood,
+  data: labels.map(d => byDay[d]?.[mood] || 0),
+  backgroundColor: COLORS[mood],
+  borderRadius: 4,
+}));
+
+const ctx1 = document.getElementById('mood-chart').getContext('2d');
+const hasAnyDataThisWeek = raw.length > 0;
+if (!hasAnyDataThisWeek) {
+  document.getElementById('mood-chart').style.display = 'none';
+  const empty = document.getElementById('mood-chart-empty');
+  empty.style.display = 'block';
+  empty.textContent = "No mood check-ins in the last 7 days. Moods are logged automatically when you chat in the Emotional tab — head over there to start tracking.";
+} else {
+  new Chart(ctx1, {
+    type: 'bar',
+    data: { labels: labels.map(d => d.slice(5)), datasets },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom' } },
+      scales: {
+        x: { stacked: true },
+        y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } },
+      },
+    },
+  });
+}
+
+// Mood breakdown — total count per mood across the whole period.
+const totals = {};
+raw.forEach(row => {
+  totals[row.mood] = (totals[row.mood] || 0) + row.count;
+});
+const pieMoods = MOODS.filter(mood => totals[mood]);
+
+const ctx2 = document.getElementById('mood-pie').getContext('2d');
+if (pieMoods.length === 0) {
+  document.getElementById('mood-pie').style.display = 'none';
+  const empty = document.getElementById('mood-pie-empty');
+  empty.style.display = 'block';
+  empty.textContent = "No moods to break down yet for this period.";
+} else {
+  new Chart(ctx2, {
+    type: 'pie',
+    data: {
+      labels: pieMoods,
+      datasets: [{
+        data: pieMoods.map(mood => totals[mood]),
+        backgroundColor: pieMoods.map(mood => COLORS[mood]),
+      }],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom' } },
+    },
+  });
+}
+</script>
+{% endblock %}

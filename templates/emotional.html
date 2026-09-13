@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}CONNECT · Emotional{% endblock %}
+
+{% block content %}
+  <section class="hero" style="text-align: center; margin-bottom: 2rem;">
+    <p class="eyebrow">Emotional</p>
+    <h1>Chat with CONNECT</h1>
+    <p class="soft-text" style="max-width: 600px; margin: 0 auto;">
+      A private, safe space to vent. Speak your mind, and your local AI companion will listen and support you in real-time.
+    </p>
+  </section>
+
+  <!-- Main Chat Window (Centered) -->
+  <div class="card journal-form" style="max-width: 650px; margin: 0 auto; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+    <div style="display: flex; justify-content: flex-end; margin-bottom: 0.75rem;">
+      <a href="{{ url_for('emotional', new=1) }}"
+         style="text-decoration: none; color: #8c6d62; font-size: 0.85rem; font-weight: 600; border: 1px solid #c8bfa7; padding: 0.4rem 0.9rem; border-radius: 8px;">
+        + New Conversation
+      </a>
+    </div>
+    <div id="chat-stream-box" style="height: 400px; overflow-y: auto; border: 1px solid #e1dbd6; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.25rem; background-color: #faf7f2; display: flex; flex-direction: column; gap: 1rem;">
+      {% if active_messages %}
+        {% for msg in active_messages %}
+          <div class="chat-bubble {% if msg.role == 'user' %}user-bubble{% else %}bot-bubble{% endif %}" 
+               style="padding: 0.75rem 1rem; max-width: 80%; line-height: 1.4; font-size: 0.95rem; border-radius: 14px; 
+                      {% if msg.role == 'user' %}align-self: flex-end; background-color: #8c6d62; color: #ffffff; border-bottom-right-radius: 0px;{% else %}align-self: flex-start; background-color: #eae1db; color: #2c2523; font-style: italic; border-bottom-left-radius: 0px;{% endif %}">
+            {{ msg.content }}
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="chat-bubble bot-bubble" style="align-self: flex-start; background-color: #eae1db; color: #2c2523; padding: 0.75rem 1rem; border-radius: 14px 14px 14px 0px; max-width: 80%; line-height: 1.4; font-style: italic;">
+          Hey there. I'm right here with you. If things are rough, frustrating, or you're just out of gas, vent it out out loud. What's on your mind?
+        </div>
+      {% endif %}
+    </div>
+
+    <div style="display: flex; gap: 0.75rem; align-items: flex-end;">
+        <textarea id="entry_text" style="flex-grow: 1; min-height: 60px; height: 60px; resize: none; padding: 0.75rem; border-radius: 8px; border: 1px solid #c8bfa7; font-family: inherit; font-size: 0.95rem; line-height: 1.4;" placeholder="Type your reply here..."></textarea>
+        <button class="primary-btn" id="submit-reflection-btn" type="button" style="margin-top: 0; height: 60px; white-space: nowrap; padding: 0 1.75rem; border-radius: 8px; font-weight: 600; display: flex; align-items: center; justify-content: center;">Send</button>
+    </div>
+  </div>
+
+  <!-- Bottom Reflections List with Inline Continue & Delete Controls -->
+  <section class="soft-panel" style="max-width: 650px; margin: 3rem auto 0 auto;">
+    <h2 style="font-size: 1.2rem; color: #4a3e3d; margin-bottom: 1rem; border-bottom: 1px solid #e1dbd6; padding-bottom: 0.5rem;">Recent reflections</h2>
+    <div id="reflections-history-list" style="display: flex; flex-direction: column; gap: 1rem;">
+      {% if entries %}
+        {% for entry in entries %}
+          <article class="history-item" style="background: #ffffff; padding: 1.25rem; border-radius: 8px; border-left: 4px solid #8c6d62; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+            <strong style="text-transform: capitalize; color: #8c6d62; font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">{{ entry.detected_state.replace("-", " ") }}</strong>
+            <p style="margin: 0 0 0.75rem 0; font-size: 0.95rem; color: #332a28; line-height: 1.4;">{{ entry.suggestion }}</p>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px dashed #e1dbd6; padding-top: 0.5rem; margin-top: 0.5rem;">
+              <small style="color: #a09288; font-size: 0.8rem;">{{ entry.created_at.strftime("%b %d, %Y") }}</small>
+              
+              <div style="display: flex; gap: 0.75rem; align-items: center;">
+                {% if entry.session_id %}
+                  <a href="{{ url_for('emotional') }}?session_id={{ entry.session_id }}" 
+                     style="text-decoration: none; color: #8c6d62; font-size: 0.82rem; font-weight: 600;">
+                    Continue Conversation &rarr;
+                  </a>
+                  <button onclick="deleteSession('{{ entry.session_id }}')" 
+                          style="background: transparent; border: none; color: #b4503c; font-size: 0.82rem; font-weight: 600; cursor: pointer;">
+                    Delete
+                  </button>
+                {% else %}
+                  <a href="{{ url_for('emotional') }}" 
+                     style="text-decoration: none; color: #8c6d62; font-size: 0.82rem; font-weight: 600;">
+                    Start Chat &rarr;
+                  </a>
+                {% endif %}
+              </div>
+            </div>
+          </article>
+        {% endfor %}
+      {% else %}
+        <p class="soft-text no-entries-msg" style="color: #908378; font-style: italic;">No saved reflections yet.</p>
+      {% endif %}
+    </div>
+  </section>
+
+<script>
+async function deleteSession(sessionId) {
+    if (!confirm("Delete this conversation thread permanently?")) return;
+    try {
+        const res = await fetch(`/api/chat/session/${sessionId}`, { method: 'DELETE' });
+        if (res.ok) {
+            window.location.href = "{{ url_for('emotional') }}";
+        } else {
+            alert("Could not delete conversation.");
+        }
+    } catch (e) {
+        console.error("Delete failed", e);
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    const submitBtn = document.getElementById("submit-reflection-btn");
+    const entryTextarea = document.getElementById("entry_text");
+    const chatStreamBox = document.getElementById("chat-stream-box");
+    const historyList = document.getElementById("reflections-history-list");
+
+    chatStreamBox.scrollTop = chatStreamBox.scrollHeight;
+
+    function appendChatBubble(text, isUser = false) {
+        const bubble = document.createElement("div");
+        bubble.className = isUser ? "chat-bubble user-bubble" : "chat-bubble bot-bubble";
+        bubble.style.padding = "0.75rem 1rem";
+        bubble.style.maxWidth = "80%";
+        bubble.style.lineHeight = "1.4";
+        bubble.style.fontSize = "0.95rem";
+        
+        if (isUser) {
+            bubble.style.alignSelf = "flex-end";
+            bubble.style.backgroundColor = "#8c6d62";
+            bubble.style.color = "#ffffff";
+            bubble.style.borderRadius = "14px 14px 0px 14px";
+        } else {
+            bubble.style.alignSelf = "flex-start";
+            bubble.style.backgroundColor = "#eae1db";
+            bubble.style.color = "#2c2523";
+            bubble.style.fontStyle = "italic";
+            bubble.style.borderRadius = "14px 14px 14px 0px";
+        }
+        
+        bubble.innerText = text;
+        chatStreamBox.appendChild(bubble);
+        chatStreamBox.scrollTop = chatStreamBox.scrollHeight;
+    }
+
+    entryTextarea.addEventListener("keypress", function(e) {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            submitBtn.click();
+        }
+    });
+
+    submitBtn.addEventListener("click", async function() {
+        const messageVal = entryTextarea.value.trim();
+        if (!messageVal) return;
+
+        appendChatBubble(messageVal, true);
+        entryTextarea.value = ""; 
+
+        submitBtn.disabled = true;
+        submitBtn.innerText = "...";
+
+        try {
+            const response = await fetch("/api/chat/message", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: messageVal })
+            });
+
+            if (!response.ok) throw new Error("Server error");
+            const data = await response.json();
+
+            appendChatBubble(data.reply, false);
+
+            if (data.is_first_message) {
+                const emptyMsg = historyList.querySelector(".no-entries-msg");
+                if (emptyMsg) emptyMsg.remove();
+
+                const formattedDate = new Date().toLocaleDateString('en-US', {
+                    month: 'short', day: '2-digit', year: 'numeric'
+                });
+
+                const historyCard = document.createElement("article");
+                historyCard.className = "history-item";
+                historyCard.style.background = "#ffffff";
+                historyCard.style.padding = "1.25rem";
+                historyCard.style.borderRadius = "8px";
+                historyCard.style.borderLeft = "4px solid #8c6d62";
+                
+                historyCard.innerHTML = `
+                    <strong style="text-transform: capitalize; color: #8c6d62; font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">${data.detected_mood.replace("-", " ")}</strong>
+                    <p style="margin: 0 0 0.75rem 0; font-size: 0.95rem; color: #332a28; line-height: 1.4;">${data.reply}</p>
+                    <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px dashed #e1dbd6; padding-top: 0.5rem; margin-top: 0.5rem;">
+                      <small style="color: #a09288; font-size: 0.8rem;">${formattedDate}</small>
+                      <div style="display: flex; gap: 0.75rem; align-items: center;">
+                        <a href="{{ url_for('emotional') }}?session_id=${data.session_id}" style="text-decoration: none; color: #8c6d62; font-size: 0.82rem; font-weight: 600;">Continue Conversation &rarr;</a>
+                        <button onclick="deleteSession('${data.session_id}')" style="background: transparent; border: none; color: #b4503c; font-size: 0.82rem; font-weight: 600; cursor: pointer;">Delete</button>
+                      </div>
+                    </div>
+                `;
+                historyList.insertBefore(historyCard, historyList.firstChild);
+            }
+
+        } catch (error) {
+            console.error("Chat error:", error);
+            appendChatBubble("I'm right here with you, but I had trouble updating right now. Please try again.", false);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Send";
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}CONNECT · Sign in{% endblock %}
+
+{% block content %}
+  <section class="hero auth-hero">
+    <p class="eyebrow">CONNECT</p>
+    <h1>Welcome back.</h1>
+    <p class="soft-text">Your practice continues where you left it.</p>
+  </section>
+
+  <form method="post" class="card auth-form">
+    {% if error %}
+      <p class="form-error">{{ error }}</p>
+    {% endif %}
+    <label class="field-label" for="email">Email</label>
+    <input id="email" type="email" name="email" autocomplete="email" required placeholder="you@example.com">
+
+    <label class="field-label" for="password">Password</label>
+    <input id="password" type="password" name="password" autocomplete="current-password" required placeholder="••••••••">
+
+    <button class="primary-btn" type="submit">Sign in</button>
+    <p class="auth-switch">New here? <a href="{{ url_for('register') }}">Create an account</a></p>
+  </form>
+{% endblock %}
