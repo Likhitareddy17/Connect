@@ -1,6 +1,5 @@
 from datetime import datetime
 
-
 # The single source of truth for valid moods — imported by app.py (to
 # validate user input) and journal_analysis.py (to tell Groq which moods
 # it's allowed to pick).
