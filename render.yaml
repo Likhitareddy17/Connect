@@ -4,9 +4,14 @@ services:
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app --workers 2 --bind 0.0.0.0:$PORT --timeout 60
+    healthCheckPath: /healthz
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
       - key: FLASK_SECRET_KEY
         generateValue: true
+      - key: TRUST_PROXY          # Render terminates TLS: needed for real client IPs + secure cookies
+        value: "1"
       - key: MYSQL_HOST
         sync: false
       - key: MYSQL_PORT
@@ -17,7 +22,9 @@ services:
         sync: false
       - key: MYSQL_DATABASE
         value: connect_mvp
-      - key: ANTHROPIC_API_KEY
+      - key: GROQ_API_KEY
+        sync: false
+      - key: LIMITER_STORAGE_URI  # redis://... so rate limits are shared across workers
         sync: false
       - key: PROKERALA_CLIENT_ID
         sync: false
