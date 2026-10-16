@@ -52,3 +52,25 @@ def test_pages_require_login(client):
 def test_unknown_page_renders_friendly_404(client):
     res = client.get("/no-such-page")
     assert res.status_code == 404 and b"drifted out of view" in res.data
+
+
+class TestChatPage:
+    def test_chat_page_has_safety_notes_hidden_until_needed(self, client_for):
+        page = client_for("hindu").get("/emotional").get_data(as_text=True)
+        assert 'id="crisis-banner"' in page and 'id="support-note"' in page
+        assert page.count("hidden>") >= 2  # both start hidden
+        assert "third-party AI service" in page  # honest data-sharing notice stays visible
+
+    def test_chat_page_is_accessible_and_has_no_inline_html_sinks(self, client_for):
+        page = client_for("sikh").get("/emotional").get_data(as_text=True)
+        assert 'role="log"' in page and 'class="skip-link"' in page and 'id="main"' in page
+        assert "innerHTML" not in page  # model output must only ever be inserted as text
+
+    def test_every_class_the_chat_page_uses_is_styled(self, client_for):
+        import re
+        from pathlib import Path
+        css = (Path(__file__).resolve().parent.parent / "static" / "styles.css").read_text(encoding="utf-8")
+        page = client_for("atheist").get("/emotional").get_data(as_text=True)
+        used = {c for m in re.findall(r'class="([^"]*)"', page) for c in m.split()}
+        unstyled = {c for c in used if f".{c}" not in css} - {"no-entries-msg", "journal-form", "card"}
+        assert unstyled == set(), unstyled

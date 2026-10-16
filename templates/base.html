@@ -4,11 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="{% block meta_description %}CONNECT is a calm space for spiritual, mental, and emotional well-being.{% endblock %}">
+  <meta name="theme-color" content="#f7f2ea">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>{% block title %}CONNECT{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to content</a>
   <div class="app-shell">
     <header class="topbar">
       <a class="brand" href="{{ url_for('home') }}" aria-label="CONNECT home">
@@ -37,7 +39,7 @@
       {% endif %}
     </header>
 
-    <main>
+    <main id="main">
       {% block content %}{% endblock %}
     </main>
   </div>
