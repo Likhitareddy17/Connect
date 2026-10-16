@@ -93,7 +93,7 @@ Health endpoints: `GET /healthz` (process up) and `GET /readyz` (database reacha
 ## Tests
 
 ```bash
-pytest                                  # 98 unit/route tests, no database or network needed
+pytest                                  # 146 unit/route tests, no database or network needed
 MYSQL_TEST_HOST=127.0.0.1 MYSQL_TEST_PASSWORD=... pytest     # + 10 integration tests on a real MySQL
 ruff check .
 ```

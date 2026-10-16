@@ -54,7 +54,8 @@ _SELF_HARM_PATTERNS = [
 
 _ABUSE_PATTERNS = [
     r"\b(being|am\s+being|getting)\s+(abused|beaten|assaulted)\b",
-    r"\b(he|she|they|someone|my\s+\w+)\s+(hit|hits|beat|beats|hurts?|threatens?)\s+me\b",
+    r"\b(he|she|they|someone|somebody|my\s+\w+)\s+(is\s+|are\s+|keeps?\s+)?"
+    r"(hit|hits|hitting|beat|beats|beating|hurt|hurts|hurting|threaten|threatens|threatening)\s+me\b",
     r"\bdomestic\s+violence\b",
     r"\bsexual(ly)?\s+(assault(ed)?|abus(e|ed))\b",
     r"\b(raped|molested)\b",
@@ -102,7 +103,7 @@ SUMMARY_PROMPT = (
 
 FALLBACK_MOOD = "calm"
 FALLBACK_NO_KEY = (
-    "I'm right here with you, but I can't connect fully right now. "
+    "I'm right here with you, but I'm not able to respond fully right now. "
     "Let's take a quiet breath together."
 )
 FALLBACK_ERROR = (

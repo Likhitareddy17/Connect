@@ -60,3 +60,18 @@ def logged_in(client, fake_store):
         sess["_user_id"] = str(user["id"])
         sess["_fresh"] = True
     return client, user
+
+
+@pytest.fixture(autouse=True)
+def no_real_network(monkeypatch):
+    """Unit tests must never reach the internet (e.g. the Aladhan prayer-times API).
+
+    Code under test handles the failure and uses local fallback data; tests that
+    need a specific response patch ``requests`` themselves.
+    """
+    import requests
+
+    def blocked(*args, **kwargs):
+        raise requests.exceptions.ConnectionError("network disabled in tests")
+
+    monkeypatch.setattr(requests, "get", blocked)
