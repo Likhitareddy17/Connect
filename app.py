@@ -173,12 +173,13 @@ def parse_uuid(value: str | None) -> str | None:
 
 def build_guidance(user: User) -> dict:
     mood = store.latest_mood(user.id) or "calm"
-    daily = spiritual_api.today()
+    provider = get_provider(user.religion)
+    daily = provider.get_day(date.today())
     practices = recommend_practices(mood=mood, goal=user.daily_goal, limit=3)
     return {
-        "focus": daily["focus"],
-        "tone": daily["tone"],
-        "reflection": daily["reflection"],
+        "focus": daily["headline"],
+        "tone": daily.get("calendar_label") or "",
+        "reflection": daily["guidance_steps"][0] if daily["guidance_steps"] else "",
         "action": practices[0] if practices else "Take a mindful pause.",
         "mood": mood,
     }
@@ -276,6 +277,7 @@ def home():
         profile=current_user,
         guidance=build_guidance(current_user),
         practices=practices,
+        religion=current_user.religion,
     )
 
 
