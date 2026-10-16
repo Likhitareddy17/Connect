@@ -30,9 +30,13 @@ flowchart LR
     F --> S[store.py<br/>MySQL pool, parameterised SQL]
     S --> DB[(MySQL 8)]
     F --> J[journal_analysis.py]
-    J -->|1. crisis regex| C{crisis?}
-    C -- yes --> R[fixed safe reply + helplines<br/>LLM never called]
-    C -- no --> G[Groq chat completion]
+    J --> L1{{"Layer 1: regex<br/>local, instant"}}
+    L1 -- match --> R[fixed safe reply + helplines<br/>chat model never called]
+    L1 -- no match --> L2{{"Layer 2: model classifier<br/>none · concern · crisis"}}
+    L2 -- crisis --> R
+    L2 -- concern --> G[Groq chat completion<br/>+ extra-care instruction]
+    L2 -- none --> G
+    L2 -. "down / invalid" .-> G
     G -->|failure / no key| FB[degraded fallback<br/>no mood recorded]
     F --> P[religion_providers + spiritual_api<br/>local calendars · optional Prokerala]
 ```
@@ -46,10 +50,33 @@ flowchart LR
 
 ## Safety design
 
-- **Crisis screening runs first and locally** (regex, `services/journal_analysis.py`). A crisis message never depends on a third-party API being up, and the UI shows a persistent helpline banner.
-- Patterns are tested in both directions (`tests/test_journal_analysis.py`): real crisis phrasing is caught, everyday idioms (“it hit me that…”, “this deadline is killing me”) are not.
-- The model is prompted never to claim clinical authority or give medical advice, and the UI states that replies come from an AI service (Groq) and are not a substitute for professional care.
-- LLM failures degrade to a gentle fixed reply and **do not** fabricate a mood entry.
+Every message passes two independent layers before the chat model sees it (`services/safety.py`):
+
+| Layer | Strength | Weakness |
+|---|---|---|
+| **1. Regex** | instant, local, deterministic, works offline | blind to paraphrase and non-English wording; the bare word "suicide" is a false alarm for film titles or essays |
+| **2. Model classifier** | catches indirect, euphemistic and Hindi-romanised distress | adds one API call (latency, rate limit), is itself an LLM, can be wrong or manipulated |
+
+The layers produce a **graded** verdict rather than a vote:
+
+- **crisis** → fixed safe reply with helplines; the chat model is never called; the UI shows a helpline banner.
+- **concern** → normal reply, but the chat model is told to respond with extra care; the UI shows a gentle "support is available" note.
+- **none** → normal reply.
+
+Design decisions, with the trade-offs:
+
+- Regex runs first, so an explicit crisis never waits on (or depends on) the network. Either layer can raise the level; neither can lower the other's verdict.
+- **Fail-soft:** if the classifier times out or returns junk, chat continues on the regex layer and the event is logged as `unavailable`.
+- A "crisis" verdict below `SAFETY_CRISIS_THRESHOLD` (default 0.6) confidence is downgraded to "concern", not ignored.
+- User text is untrusted: sent in the *user* role inside delimiters (a user-typed `</conversation>` is stripped) and the model's output is validated against a strict schema. This reduces prompt-injection risk but cannot remove it, which is why layer 1 stays independent of the model.
+- Message text is never logged; only level, category and which layer decided.
+- Everything else: the model is prompted never to claim clinical authority, and the UI states that replies come from an AI service (Groq) and are not a substitute for professional care. LLM failures degrade to a gentle fixed reply and never fabricate a mood entry.
+
+**Measuring it:** `python scripts/eval_safety.py [--model]` scores each layer on a small hand-written labelled set
+(`scripts/safety_cases.json`). Regex alone catches 6/6 explicit crisis messages but 0/19 paraphrased ones, and raises 2 false alarms
+on 13 benign sentences. The set is synthetic and deliberately probes regex's blind spot: it shows *what kind* of message each layer
+misses, not a real-world miss rate. Run it with `--model` and your own key to see layer 2's numbers; they are not published here
+because they have not been measured against a validated dataset.
 
 ## Security
 
@@ -128,7 +155,8 @@ tests/                  unit, route and MySQL integration tests
 
 Being explicit about these is deliberate:
 
-- **Crisis detection is a regex baseline**, not a clinical classifier. It will miss indirect or non-English phrasing. A second-layer model-based check is the next step.
+- **The safety layers are aids, not a clinical tool.** The classifier has not been validated on real data; a regex hit is final (so "Suicide Squad" triggers the crisis reply); prompt injection can be reduced but not eliminated; and the chat model's *reply* is not screened yet (output moderation is the next step).
+- **The classifier doubles the API calls per message** (latency and Groq rate limits). Set `SAFETY_CLASSIFIER_ENABLED=0` to disable it, or `GROQ_SAFETY_MODEL` to use a smaller, faster model for it.
 - **Helpline numbers are hardcoded** (India); verify them before any real deployment.
 - **Festival data is curated for 2026** and Islamic/Sikh dates are approximate; later years need a data update or a proper calendar library.
 - **Live Panchang** needs a paid Prokerala plan for arbitrary dates; on the free plan it is used only on Jan 1st (otherwise local data is shown).
@@ -138,4 +166,4 @@ Being explicit about these is deliberate:
 ## Roadmap
 
 Account + data deletion · email verification & password reset · app factory (`create_app`) · Alembic migrations ·
-model-based safety classifier · CSP with nonces · per-year calendar data/library · E2E browser tests.
+output moderation + a validated safety eval set · CSP with nonces · per-year calendar data/library · E2E browser tests.

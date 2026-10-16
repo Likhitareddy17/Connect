@@ -10,6 +10,9 @@ os.environ["FLASK_SECRET_KEY"] = "test-secret-key"
 os.environ["COOKIE_SECURE"] = "0"
 # Prevent any real external calls during tests.
 os.environ["GROQ_API_KEY"] = ""
+# The model-based safety classifier makes an extra API call per message. Most tests assert on the
+# chat call alone, so it is off by default here; tests/test_safety.py enables it explicitly.
+os.environ["SAFETY_CLASSIFIER_ENABLED"] = "0"
 os.environ["PROKERALA_CLIENT_ID"] = ""
 os.environ["PROKERALA_CLIENT_SECRET"] = ""
 

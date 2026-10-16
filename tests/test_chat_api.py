@@ -128,3 +128,43 @@ class TestThreadOwnership:
     def test_garbage_session_id_is_ignored(self, logged_in):
         client, _ = logged_in
         assert client.get("/emotional?session_id=../../etc/passwd").status_code == 200
+
+
+class TestModelSafetyLayerThroughTheApp:
+    """End to end through the Flask route with the classifier switched on."""
+
+    @pytest.fixture(autouse=True)
+    def classifier_on(self, monkeypatch):
+        monkeypatch.setenv("SAFETY_CLASSIFIER_ENABLED", "1")
+
+    def post(self, client, fake, text):
+        with patch("services.safety.requests.post", side_effect=fake):
+            return client.post("/api/chat/message", json={"message": text}).get_json()
+
+    def test_paraphrased_crisis_gets_the_safe_reply_and_the_banner_flag(self, logged_in, fake_store):
+        from tests.groq_fakes import FakeGroq
+        client, user = logged_in
+        fake = FakeGroq(verdict={"risk": "crisis", "category": "self_harm", "confidence": 0.95})
+        data = self.post(client, fake, "everyone would be happier if I just wasn't around anymore")
+        assert data["crisis"] is True and "112" in data["reply"]
+        assert fake.chat_calls == []
+        assert fake_store.latest_mood(user["id"]) == "overwhelmed"
+
+    def test_concern_shows_the_support_note_but_not_the_crisis_banner(self, logged_in):
+        from tests.groq_fakes import FakeGroq
+        client, _ = logged_in
+        fake = FakeGroq(verdict={"risk": "concern", "category": "none", "confidence": 0.8}, reply="I'm here.")
+        data = self.post(client, fake, "I feel like such a burden")
+        assert data["support_note"] is True and data["crisis"] is False and data["reply"] == "I'm here."
+
+    def test_ordinary_message_has_no_flags(self, logged_in):
+        from tests.groq_fakes import FakeGroq
+        client, _ = logged_in
+        data = self.post(client, FakeGroq(verdict={"risk": "none", "category": "none", "confidence": 1}), "good day")
+        assert data["support_note"] is False and data["crisis"] is False
+
+    def test_classifier_outage_does_not_break_the_chat(self, logged_in):
+        from tests.groq_fakes import FakeGroq
+        client, _ = logged_in
+        data = self.post(client, FakeGroq(classifier_raises=TimeoutError("down")), "hello there")
+        assert data["reply"] == "I hear you." and data["crisis"] is False

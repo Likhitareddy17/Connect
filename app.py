@@ -438,6 +438,7 @@ def api_chat_message():
         "practices": recommend_practices(mood=mood, goal=current_user.daily_goal, limit=3),
         "is_first_message": is_first_message,
         "crisis": result.is_crisis,
+        "support_note": result.needs_support_note,
         "degraded": result.source == SOURCE_FALLBACK,
     })
 

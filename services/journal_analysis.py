@@ -1,8 +1,10 @@
 """Chat companion for CONNECT's emotional module.
 
 Pipeline for every user message:
-  1. Crisis screen (regex) on the *latest user message* — runs before any LLM
-     call, so a crisis message never depends on a third-party service.
+  1. Safety assessment of the *latest user message* (services/safety.py): a local
+     regex layer, then a model classifier. A crisis verdict returns a fixed safe
+     reply and the chat model is never called; a "concern" verdict makes the chat
+     model respond with extra care.
   2. Groq chat completion returning JSON ``{"reply", "mood"}``.
   3. Rolling summary refresh every few turns to keep prompts short.
 
@@ -15,17 +17,28 @@ from __future__ import annotations
 import json
 import logging
 import os
-import re
 from dataclasses import dataclass
 
 import requests
 
 from services.grounding import ALLOWED_MOODS
+from services.safety import (  # noqa: F401 - several names re-exported for existing importers/tests
+    CONCERN_ADDENDUM,
+    CRISIS_RESPONSES,
+    DEFAULT_GROQ_MODEL,
+    GROQ_URL,
+    LEVEL_NONE,
+    SOURCE_REGEX_ONLY,
+    SOURCE_UNAVAILABLE,
+    SafetyAssessment,
+    assess_message,
+    check_regex_crisis,
+    crisis_reply_for,
+)
 
 logger = logging.getLogger(__name__)
 
-GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
-GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
+GROQ_MODEL = os.getenv("GROQ_MODEL", DEFAULT_GROQ_MODEL)
 
 SOURCE_CRISIS = "crisis"
 SOURCE_LLM = "llm"
@@ -34,54 +47,6 @@ SOURCE_FALLBACK = "fallback"
 # History window sent to the model, and how often the summary is refreshed.
 HISTORY_WINDOW = 6
 SUMMARY_EVERY_N_MESSAGES = 3
-
-# ── Crisis screening ────────────────────────────────────────────────────────
-# This is a deliberately conservative *baseline* screen, not a clinical tool.
-# It trades some recall for few false alarms on everyday language ("it hit
-# me that..."). Tests in tests/test_crisis.py pin both directions.
-
-_SELF_HARM_PATTERNS = [
-    r"\b(kill|end|take)\s+(my\s*self|myself|my\s+(own\s+)?life)\b",
-    r"\bsuicid(e|al)\b",
-    r"\b(want|wish|wanna)\s+to\s+die\b",
-    r"\b(self[\s-]?harm(ing)?|hurt(ing)?\s+myself|harm(ing)?\s+myself|cut(ting)?\s+myself)\b",
-    r"\bno\s+(reason|point)\s+(to|in)\s+(live|living|go\s+on|going\s+on)\b",
-    r"\b(don'?t|do\s+not)\s+want\s+to\s+(be\s+here|live|exist|wake\s+up)(\s+anymore)?\b",
-    r"\b(better|easier)\s+(off\s+)?without\s+me\b",
-    r"\b(end|ending)\s+it\s+all\b",
-    r"\bcan'?t\s+(go\s+on|do\s+this\s+anymore|take\s+it\s+anymore)\b",
-]
-
-_ABUSE_PATTERNS = [
-    r"\b(being|am\s+being|getting)\s+(abused|beaten|assaulted)\b",
-    r"\b(he|she|they|someone|somebody|my\s+\w+)\s+(is\s+|are\s+|keeps?\s+)?"
-    r"(hit|hits|hitting|beat|beats|beating|hurt|hurts|hurting|threaten|threatens|threatening)\s+me\b",
-    r"\bdomestic\s+violence\b",
-    r"\bsexual(ly)?\s+(assault(ed)?|abus(e|ed))\b",
-    r"\b(raped|molested)\b",
-]
-
-SUICIDE_SELF_HARM_REGEX = re.compile("|".join(_SELF_HARM_PATTERNS), re.IGNORECASE)
-ABUSE_VIOLENCE_REGEX = re.compile("|".join(_ABUSE_PATTERNS), re.IGNORECASE)
-
-# Helpline numbers are shown to users verbatim — keep them in one place and
-# re-verify before every release.
-CRISIS_RESPONSES = {
-    "suicide_self_harm": (
-        "I'm really glad you told me, and your safety matters most right now. "
-        "Please reach out to someone who can support you immediately: in India, call the "
-        "iCall helpline at 9152987821, or AASRA at 9820466726 (24/7). "
-        "If you are in immediate danger, please call 112 or go to the nearest hospital. "
-        "You do not have to carry this alone."
-    ),
-    "abuse_violence": (
-        "I hear you, and I want to make sure you are safe. "
-        "If you are facing abuse or domestic danger, please connect with support: "
-        "in India, call the National Commission for Women helpline at 7827170170, "
-        "or emergency services at 112. "
-        "Please reach out to a trusted person as soon as you can."
-    ),
-}
 
 SYSTEM_PROMPT = (
     "You are CONNECT, an empathetic, grounded wellness companion. "
@@ -117,19 +82,21 @@ class ChatResult:
     mood: str | None  # None => no reliable mood signal; do not record it
     summary: str
     source: str  # SOURCE_CRISIS | SOURCE_LLM | SOURCE_FALLBACK
+    risk_level: str = LEVEL_NONE          # safety verdict: none | concern | crisis
+    safety_source: str = SOURCE_REGEX_ONLY  # which layer decided (see services.safety)
 
     @property
     def is_crisis(self) -> bool:
         return self.source == SOURCE_CRISIS
 
+    @property
+    def needs_support_note(self) -> bool:
+        """Classifier flagged 'concern': show the gentle resources note in the UI."""
+        return self.risk_level == "concern"
 
-def check_regex_crisis(text: str) -> tuple[str | None, str | None]:
-    """Return (crisis_reply, mood) if the text matches a crisis category."""
-    if SUICIDE_SELF_HARM_REGEX.search(text):
-        return CRISIS_RESPONSES["suicide_self_harm"], "overwhelmed"
-    if ABUSE_VIOLENCE_REGEX.search(text):
-        return CRISIS_RESPONSES["abuse_violence"], "overwhelmed"
-    return None, None
+    @property
+    def safety_degraded(self) -> bool:
+        return self.safety_source == SOURCE_UNAVAILABLE
 
 
 def update_rolling_summary(history: list[dict[str, str]], existing_summary: str, api_key: str) -> str:
@@ -176,21 +143,27 @@ def generate_chat_response(
     ``total_messages`` is the real thread length (the history passed in is only
     a window); it decides when the rolling summary is refreshed.
     """
-    latest_message = conversation_history[-1]["content"] if conversation_history else ""
-
-    crisis_reply, crisis_mood = check_regex_crisis(latest_message)
-    if crisis_reply:
-        logger.info("Crisis safety screen triggered (LLM skipped).")
-        return ChatResult(crisis_reply, crisis_mood, rolling_summary, SOURCE_CRISIS)
-
     api_key = os.getenv("GROQ_API_KEY")
+
+    # Safety first: regex (local, instant) then the model classifier (if configured).
+    assessment = assess_message(conversation_history, api_key)
+    logger.info("Safety assessment: level=%s category=%s source=%s",
+                assessment.level, assessment.category, assessment.source)
+    safety = {"risk_level": assessment.level, "safety_source": assessment.source}
+
+    if assessment.is_crisis:
+        return ChatResult(crisis_reply_for(assessment.category), "overwhelmed", rolling_summary,
+                          SOURCE_CRISIS, **safety)
+
     if not api_key:
         logger.warning("GROQ_API_KEY is missing; returning fallback reply.")
-        return ChatResult(FALLBACK_NO_KEY, None, rolling_summary, SOURCE_FALLBACK)
+        return ChatResult(FALLBACK_NO_KEY, None, rolling_summary, SOURCE_FALLBACK, **safety)
 
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     if rolling_summary:
         messages.append({"role": "system", "content": f"Context summary of earlier chat: {rolling_summary}"})
+    if assessment.is_concern:
+        messages.append({"role": "system", "content": CONCERN_ADDENDUM})
     for msg in conversation_history[-HISTORY_WINDOW:]:
         messages.append(
             {
@@ -228,8 +201,8 @@ def generate_chat_response(
         count = total_messages if total_messages is not None else len(conversation_history)
         if count % SUMMARY_EVERY_N_MESSAGES == 0:
             summary = update_rolling_summary(conversation_history, rolling_summary, api_key)
-        return ChatResult(reply, mood, summary, SOURCE_LLM)
+        return ChatResult(reply, mood, summary, SOURCE_LLM, **safety)
 
     except Exception as exc:  # noqa: BLE001 - never surface LLM errors to the user
         logger.error("Groq generation failed: %s", exc)
-        return ChatResult(FALLBACK_ERROR, None, rolling_summary, SOURCE_FALLBACK)
+        return ChatResult(FALLBACK_ERROR, None, rolling_summary, SOURCE_FALLBACK, **safety)
