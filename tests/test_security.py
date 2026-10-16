@@ -126,7 +126,18 @@ class TestHardening:
         assert client.get("/api/mood/history?days=-5").status_code == 200
 
     def test_app_refuses_to_start_without_secret_key(self):
+        # app.py calls load_dotenv(), so a developer's own .env would silently supply the key and
+        # defeat this test. Disable .env loading in the child process so the result never depends
+        # on what happens to be in the working copy.
         env = {k: v for k, v in os.environ.items() if k not in {"FLASK_SECRET_KEY", "FLASK_DEBUG"}}
-        proc = subprocess.run([sys.executable, "-c", "import app"], cwd=ROOT, env=env,
+        code = "import dotenv; dotenv.load_dotenv = lambda *a, **k: False; import app"
+        proc = subprocess.run([sys.executable, "-c", code], cwd=ROOT, env=env,
                               capture_output=True, text=True)
         assert proc.returncode != 0 and "FLASK_SECRET_KEY" in proc.stderr
+
+    def test_app_starts_when_secret_key_comes_from_env(self):
+        """The positive case: with a key present the app imports cleanly."""
+        env = dict(os.environ, FLASK_SECRET_KEY="some-key")
+        proc = subprocess.run([sys.executable, "-c", "import app"], cwd=ROOT, env=env,
+                              capture_output=True, text=True)
+        assert proc.returncode == 0, proc.stderr
