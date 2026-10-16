@@ -1,6 +1,6 @@
 [tool.ruff]
 line-length = 120
-target-version = "py311"
+target-version = "py39"  # lowest supported Python; stops ruff rewriting code to 3.10+/3.11+ APIs
 extend-exclude = ["venv", ".venv"]
 
 [tool.ruff.lint]

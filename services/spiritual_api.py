@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 import os
 import time
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import requests
 
@@ -142,7 +142,7 @@ def _prokerala_token() -> str | None:
     global _cached_token, _token_expires_at
 
     # If we have a token and it is still valid for at least another 2 minutes, return it
-    if _cached_token and _token_expires_at and datetime.now(UTC) < _token_expires_at:
+    if _cached_token and _token_expires_at and datetime.now(timezone.utc) < _token_expires_at:
         return _cached_token
 
     client_id = os.getenv("PROKERALA_CLIENT_ID")
@@ -161,7 +161,7 @@ def _prokerala_token() -> str | None:
         _cached_token = json_data.get("access_token")
         expires_in = json_data.get("expires_in", 3600)
         # Give ourselves a 120-second safety margin
-        _token_expires_at = datetime.now(UTC) + timedelta(seconds=expires_in - 120)
+        _token_expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in - 120)
 
         return _cached_token
     except Exception as exc:

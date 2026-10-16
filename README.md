@@ -60,7 +60,7 @@ parameterised SQL everywhere · security headers · rate limiting (Redis-backed 
 
 ## Tech stack
 
-Python 3.11 · Flask 3 · Flask-Login · Flask-WTF · Flask-Limiter · MySQL 8 (`mysql-connector-python` pool) · bcrypt ·
+Python 3.9+ (CI tests 3.9 and 3.12; Docker image uses 3.11) · Flask 3 · Flask-Login · Flask-WTF · Flask-Limiter · MySQL 8 (`mysql-connector-python` pool) · bcrypt ·
 Groq API (`openai/gpt-oss-20b` by default, override with `GROQ_MODEL`) · Chart.js · Gunicorn · Docker · GitHub Actions · Ruff · pytest
 
 ## Local setup
