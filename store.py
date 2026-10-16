@@ -54,7 +54,9 @@ class ConnectStore:
     # ── Auth ────────────────────────────────────────────────────────────────
 
     def create_user(self, email: str, display_name: str, password: str, religion: str = "atheist") -> dict | None:
-        """Hash password and insert a new user. Returns user dict or None on duplicate."""
+        """Hash password and insert a new user. Returns user dict or None on duplicate email."""
+        email = email.lower().strip()
+        display_name = display_name.strip()[:120] or "Friend"
         pw_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
         safe_religion = religion if religion in ALLOWED_RELIGIONS else "atheist"
         try:
@@ -63,11 +65,10 @@ class ConnectStore:
                 cursor.execute(
                     """INSERT INTO users (email, display_name, password_hash, daily_goal, religion)
                        VALUES (%s, %s, %s, 'grounding', %s)""",
-                    (email.lower().strip(), display_name.strip() or "Friend", pw_hash, safe_religion),
+                    (email, display_name, pw_hash, safe_religion),
                 )
-                new_id = cursor.lastrowid
                 return {
-                    "id": new_id, "email": email, "display_name": display_name,
+                    "id": cursor.lastrowid, "email": email, "display_name": display_name,
                     "daily_goal": "grounding", "religion": safe_religion,
                 }
         except mysql.connector.IntegrityError:
@@ -154,15 +155,32 @@ class ConnectStore:
             return cursor.fetchall()
 
 
-    # ── Chat Threads & History Persistence ──────────────────────────────────
+    # ── Chat threads ────────────────────────────────────────────────────────
 
-    def create_chat_session(self, user_id: int, session_id: str) -> None:
+    def ensure_chat_session(self, user_id: int, session_id: str) -> bool:
+        """Create the thread if new. Returns True only if it belongs to ``user_id``.
+
+        ``INSERT IGNORE`` alone would silently "succeed" for a thread that
+        already belongs to someone else, so ownership is verified explicitly.
+        """
         with self.connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 "INSERT IGNORE INTO chat_sessions (id, user_id) VALUES (%s, %s)",
                 (session_id, user_id),
             )
+            cursor.execute("SELECT user_id FROM chat_sessions WHERE id = %s", (session_id,))
+            row = cursor.fetchone()
+            return bool(row) and row[0] == user_id
+
+    def owns_chat_session(self, user_id: int, session_id: str) -> bool:
+        with self.connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT 1 FROM chat_sessions WHERE id = %s AND user_id = %s",
+                (session_id, user_id),
+            )
+            return cursor.fetchone() is not None
 
     def save_chat_message(self, session_id: str, role: str, content: str) -> None:
         with self.connection() as conn:
@@ -172,22 +190,59 @@ class ConnectStore:
                 (session_id, role, content),
             )
 
-    def get_session_messages(self, session_id: str, limit: int = 10) -> list[dict]:
+    def get_session_messages(self, session_id: str, limit: int = 200) -> list[dict]:
+        """Full thread for display, oldest first."""
         with self.connection() as conn:
             cursor = conn.cursor(dictionary=True)
             cursor.execute(
-                """SELECT role, content FROM chat_messages 
-                   WHERE session_id = %s ORDER BY created_at ASC LIMIT %s""",
+                """SELECT role, content FROM chat_messages
+                   WHERE session_id = %s ORDER BY id ASC LIMIT %s""",
                 (session_id, limit),
             )
             return cursor.fetchall()
+
+    def get_recent_messages(self, session_id: str, limit: int = 6) -> list[dict]:
+        """The *latest* ``limit`` messages, returned oldest-first.
+
+        (Selecting ``ORDER BY ... ASC LIMIT n`` would return the *first* n
+        messages of the thread instead — see tests/test_chat_api.py.)
+        """
+        with self.connection() as conn:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute(
+                """SELECT role, content FROM (
+                       SELECT id, role, content FROM chat_messages
+                       WHERE session_id = %s ORDER BY id DESC LIMIT %s
+                   ) latest ORDER BY id ASC""",
+                (session_id, limit),
+            )
+            return cursor.fetchall()
+
+    def count_session_messages(self, session_id: str) -> int:
+        with self.connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM chat_messages WHERE session_id = %s", (session_id,))
+            return cursor.fetchone()[0]
+
+    def get_session_summary(self, session_id: str) -> str:
+        with self.connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT summary FROM chat_sessions WHERE id = %s", (session_id,))
+            row = cursor.fetchone()
+            return (row[0] or "") if row else ""
+
+    def set_session_summary(self, session_id: str, summary: str) -> None:
+        with self.connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE chat_sessions SET summary = %s WHERE id = %s", (summary, session_id))
 
     def list_user_sessions(self, user_id: int) -> list[dict]:
         with self.connection() as conn:
             cursor = conn.cursor(dictionary=True)
             cursor.execute(
-                """SELECT s.id, s.created_at, 
-                          (SELECT content FROM chat_messages WHERE session_id = s.id ORDER BY created_at ASC LIMIT 1) AS snippet
+                """SELECT s.id, s.created_at,
+                          (SELECT content FROM chat_messages WHERE session_id = s.id
+                           ORDER BY id ASC LIMIT 1) AS snippet
                    FROM chat_sessions s
                    WHERE s.user_id = %s ORDER BY s.created_at DESC""",
                 (user_id,),
@@ -195,15 +250,25 @@ class ConnectStore:
             return cursor.fetchall()
 
     def delete_chat_session(self, user_id: int, session_id: str) -> bool:
+        """Delete a thread the user owns. Messages and its reflection card go via ON DELETE CASCADE.
+
+        The ``user_id`` condition is the only thing deleted-by — nothing is
+        removed for threads that belong to someone else.
+        """
         with self.connection() as conn:
             cursor = conn.cursor()
-            # Cascade delete messages and session record
-            cursor.execute("DELETE FROM chat_messages WHERE session_id = %s", (session_id,))
             cursor.execute(
                 "DELETE FROM chat_sessions WHERE id = %s AND user_id = %s",
                 (session_id, user_id),
             )
             return cursor.rowcount > 0
+
+    def ping(self) -> bool:
+        """Cheap liveness check for /readyz."""
+        with self.connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1")
+            return cursor.fetchone() == (1,)
 
     # ── Journal ─────────────────────────────────────────────────────────────
 

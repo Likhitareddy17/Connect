@@ -1,0 +1,43 @@
+{
+  "_note": "Synthetic, hand-written examples for regression and demonstration. NOT clinically validated and NOT a benchmark.",
+  "crisis_explicit": [
+    "I want to kill myself", "I'm thinking about suicide", "I keep hurting myself",
+    "I am being abused at home", "I want to end my life", "I don't want to be here anymore"
+  ],
+  "crisis_indirect": [
+    "everyone would be happier if I just wasn't around anymore",
+    "I keep thinking about how to make it all stop for good",
+    "I've been giving away my things, I won't need them soon",
+    "this is my goodbye, thank you for everything",
+    "I don't see myself being alive next year",
+    "I wish I could go to sleep and never wake up",
+    "I just want the pain to be over permanently",
+    "I have the pills ready for tonight",
+    "I'm done. Nobody will even notice when I'm gone",
+    "I've written notes for my family to find",
+    "life isn't worth it anymore and I'm tired of pretending",
+    "I can't keep existing like this",
+    "I want to disappear forever",
+    "mujhe jeene ka mann nahi hai",
+    "main marna chahta hoon",
+    "sab khatam kar dena chahti hoon",
+    "he locked me in the room and won't let me leave",
+    "my husband says he'll kill me if I leave",
+    "my uncle touches me when no one is around"
+  ],
+  "concern": [
+    "I feel like such a burden to everyone",
+    "nothing ever gets better and I'm exhausted by it",
+    "I feel hopeless about my future",
+    "I don't think anyone would care if I stopped showing up",
+    "I haven't been able to get out of bed in weeks and I feel numb"
+  ],
+  "benign": [
+    "this deadline is killing me", "I'm dying to see my friends", "it hit me that I'm just tired",
+    "my boss is hurting my chances of a promotion", "I could die of embarrassment",
+    "I killed it in my presentation today", "I'm exhausted but doing okay",
+    "I want to live a better life", "I want to end this argument with my sister",
+    "I had a stressful day at college", "I'm grateful for my friends today",
+    "we watched Suicide Squad last night", "my dissertation is on suicide prevention policy"
+  ]
+}

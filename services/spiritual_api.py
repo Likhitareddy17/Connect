@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import date, datetime, timezone, timedelta
-from functools import lru_cache
+import time
+from datetime import date, datetime, timedelta, timezone
 
 import requests
 
@@ -140,7 +140,7 @@ _token_expires_at: datetime | None = None
 def _prokerala_token() -> str | None:
     """Fetch OAuth2 token from Prokerala and cache it natively until it expires."""
     global _cached_token, _token_expires_at
-    
+
     # If we have a token and it is still valid for at least another 2 minutes, return it
     if _cached_token and _token_expires_at and datetime.now(timezone.utc) < _token_expires_at:
         return _cached_token
@@ -157,53 +157,77 @@ def _prokerala_token() -> str | None:
         )
         resp.raise_for_status()
         json_data = resp.json()
-        
+
         _cached_token = json_data.get("access_token")
         expires_in = json_data.get("expires_in", 3600)
         # Give ourselves a 120-second safety margin
         _token_expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in - 120)
-        
+
         return _cached_token
     except Exception as exc:
         logger.warning("Prokerala token fetch failed: %s", exc)
         return None
 
+_PANCHANG_TTL_OK = 6 * 3600   # a day's panchang doesn't change; refresh a few times a day
+_PANCHANG_TTL_MISS = 600      # retry failures after 10 minutes, don't hammer the API
+_panchang_cache: dict[tuple, tuple[float, dict | None]] = {}
+
+
+def _prokerala_free_tier() -> bool:
+    """Free Prokerala plans only answer for January 1st of the current year."""
+    return os.getenv("PROKERALA_FREE_TIER", "1").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _prokerala_panchang(target: date, lat: float = 17.385, lon: float = 78.4867) -> dict | None:
-    token = _prokerala_token()
-    if not token:
+    """Live panchang for ``target`` — or None, so callers fall back to local data.
+
+    On the free tier the API can only answer for Jan 1st. Substituting Jan 1st
+    data for other days would show a *wrong* panchang labelled "live", so on
+    the free tier we only call the API when ``target`` really is Jan 1st.
+    Set PROKERALA_FREE_TIER=0 on a paid plan to query any date.
+    """
+    if _prokerala_free_tier() and (target.month, target.day) != (1, 1):
         return None
 
     lat = float(os.getenv("PANCHANG_LAT", lat))
     lon = float(os.getenv("PANCHANG_LON", lon))
-    ayanamsa = os.getenv("PANCHANG_AYANAMSA", "1")
+    cache_key = (target, lat, lon)
+    now = time.monotonic()
+    cached = _panchang_cache.get(cache_key)
+    if cached and cached[0] > now:
+        return cached[1]
 
-    # Prokerala's free tier only accepts Jan 1st of the current year as the
-    # query date. This means the panchang shown is always for Jan 1st, not
-    # today — a real limitation of the free plan, not a bug. Upgrading the
-    # Prokerala plan removes this restriction.
-    dt_str = f"{target.year}-01-01T06:00:00+05:30"
+    result = _fetch_prokerala_panchang(target, lat, lon)
+    ttl = _PANCHANG_TTL_OK if result else _PANCHANG_TTL_MISS
+    _panchang_cache[cache_key] = (now + ttl, result)
+    return result
+
+
+def _fetch_prokerala_panchang(target: date, lat: float, lon: float) -> dict | None:
+    token = _prokerala_token()
+    if not token:
+        return None
+
+    ayanamsa = os.getenv("PANCHANG_AYANAMSA", "1")
+    dt_str = f"{target.isoformat()}T06:00:00+05:30"
 
     try:
         resp = requests.get(
             "https://api.prokerala.com/v2/astrology/panchang",
             headers={"Authorization": f"Bearer {token}"},
-            params={
-                "ayanamsa": ayanamsa,
-                "coordinates": f"{lat},{lon}",
-                "datetime": dt_str,
-            },
+            params={"ayanamsa": ayanamsa, "coordinates": f"{lat},{lon}", "datetime": dt_str},
             timeout=8,
         )
         resp.raise_for_status()
         data = resp.json().get("data", {})
         return _normalise_prokerala(data, target)
     except requests.exceptions.HTTPError as exc:
-        # Print the actual response body to see Prokerala's error message
-        logger.warning("Prokerala panchang fetch failed: %s | body: %s", exc, exc.response.text)
+        logger.warning("Prokerala panchang fetch failed: %s | body: %s", exc, exc.response.text[:300])
         return None
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.warning("Prokerala panchang fetch failed: %s", exc)
-        return None    
+        return None
+
 
 def _first(lst, field: str, default: str = "—") -> str:
     if lst and isinstance(lst, list):
@@ -227,7 +251,7 @@ def _normalise_prokerala(data: dict, target: date) -> dict:
     sunset = data.get("sunset", "—")
     moonrise = data.get("moonrise", "—")
     moonset = data.get("moonset", "—")
-    
+
     return {
         "location": f"{os.getenv('PANCHANG_LAT', '17.39')}°N, {os.getenv('PANCHANG_LON', '78.49')}°E",
         "weekday": target.strftime("%A"),
@@ -261,7 +285,7 @@ class SpiritualApi:
         except Exception as exc:
             logger.warning("Panchang lookup crashed, falling back to mock: %s", exc)
             live_panchang = None
-            
+
         mock = _MOCK_PANCHANG.copy()
         mock["weekday"] = target.strftime("%A")
         panchang = live_panchang or override.get("panchangam", mock)

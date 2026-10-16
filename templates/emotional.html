@@ -3,46 +3,45 @@
 {% block title %}CONNECT · Emotional{% endblock %}
 
 {% block content %}
-  <section class="hero" style="text-align: center; margin-bottom: 2rem;">
+  <section class="hero chat-hero">
     <p class="eyebrow">Emotional</p>
     <h1>Chat with CONNECT</h1>
-    <p class="soft-text" style="max-width: 600px; margin: 0 auto;">
-      A private, safe space to vent. Speak your mind, and your local AI companion will listen and support you in real-time.
+    <p class="soft-text chat-disclaimer">
+      A space to vent and reflect. Replies come from an AI companion — it is not a therapist and can't replace professional care. Your messages are sent to a third-party AI service (Groq) to generate replies.
     </p>
   </section>
 
   <!-- Main Chat Window (Centered) -->
-  <div class="card journal-form" style="max-width: 650px; margin: 0 auto; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-    <div style="display: flex; justify-content: flex-end; margin-bottom: 0.75rem;">
-      <a href="{{ url_for('emotional', new=1) }}"
-         style="text-decoration: none; color: #8c6d62; font-size: 0.85rem; font-weight: 600; border: 1px solid #c8bfa7; padding: 0.4rem 0.9rem; border-radius: 8px;">
-        + New Conversation
-      </a>
+  <div class="card journal-form chat-card">
+    <div class="chat-toolbar">
+      <a href="{{ url_for('emotional', new=1) }}" class="ghost-link">+ New conversation</a>
     </div>
-    <div id="chat-stream-box" style="height: 400px; overflow-y: auto; border: 1px solid #e1dbd6; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.25rem; background-color: #faf7f2; display: flex; flex-direction: column; gap: 1rem;">
+    <div id="crisis-banner" class="safety-banner crisis" role="alert" hidden>
+      <strong>You matter, and help is available.</strong>
+      If you are in immediate danger, call <strong>112</strong> (India emergency). You can also reach iCall at <strong>9152987821</strong> or AASRA at <strong>9820466726</strong> (24/7).
+    </div>
+    <div id="support-note" class="safety-banner support" role="status" hidden>
+      If things feel heavy right now, you don't have to carry it alone. You can reach iCall at <strong>9152987821</strong> or AASRA at <strong>9820466726</strong> (24/7), or talk to someone you trust.
+    </div>
+    <div id="chat-stream-box" class="chat-stream" role="log" aria-live="polite" aria-label="Conversation">
       {% if active_messages %}
         {% for msg in active_messages %}
-          <div class="chat-bubble {% if msg.role == 'user' %}user-bubble{% else %}bot-bubble{% endif %}" 
-               style="padding: 0.75rem 1rem; max-width: 80%; line-height: 1.4; font-size: 0.95rem; border-radius: 14px; 
-                      {% if msg.role == 'user' %}align-self: flex-end; background-color: #8c6d62; color: #ffffff; border-bottom-right-radius: 0px;{% else %}align-self: flex-start; background-color: #eae1db; color: #2c2523; font-style: italic; border-bottom-left-radius: 0px;{% endif %}">
-            {{ msg.content }}
-          </div>
+          <div class="chat-bubble {% if msg.role == 'user' %}user-bubble{% else %}bot-bubble{% endif %}">{{ msg.content }}</div>
         {% endfor %}
       {% else %}
-        <div class="chat-bubble bot-bubble" style="align-self: flex-start; background-color: #eae1db; color: #2c2523; padding: 0.75rem 1rem; border-radius: 14px 14px 14px 0px; max-width: 80%; line-height: 1.4; font-style: italic;">
-          Hey there. I'm right here with you. If things are rough, frustrating, or you're just out of gas, vent it out out loud. What's on your mind?
-        </div>
+        <div class="chat-bubble bot-bubble">Hey there. I'm right here with you. If things are rough, frustrating, or you're just out of gas, say it out loud. What's on your mind?</div>
       {% endif %}
     </div>
 
-    <div style="display: flex; gap: 0.75rem; align-items: flex-end;">
-        <textarea id="entry_text" style="flex-grow: 1; min-height: 60px; height: 60px; resize: none; padding: 0.75rem; border-radius: 8px; border: 1px solid #c8bfa7; font-family: inherit; font-size: 0.95rem; line-height: 1.4;" placeholder="Type your reply here..."></textarea>
-        <button class="primary-btn" id="submit-reflection-btn" type="button" style="margin-top: 0; height: 60px; white-space: nowrap; padding: 0 1.75rem; border-radius: 8px; font-weight: 600; display: flex; align-items: center; justify-content: center;">Send</button>
+    <div class="chat-composer">
+      <label class="sr-only" for="entry_text">Your message</label>
+      <textarea id="entry_text" class="chat-input" maxlength="2000" placeholder="Type your message. Enter to send, Shift+Enter for a new line."></textarea>
+      <button class="primary-btn chat-send" id="submit-reflection-btn" type="button">Send</button>
     </div>
   </div>
 
   <!-- Bottom Reflections List with Inline Continue & Delete Controls -->
-  <section class="soft-panel" style="max-width: 650px; margin: 3rem auto 0 auto;">
+  <section class="soft-panel recent-panel">
     <h2 style="font-size: 1.2rem; color: #4a3e3d; margin-bottom: 1rem; border-bottom: 1px solid #e1dbd6; padding-bottom: 0.5rem;">Recent reflections</h2>
     <div id="reflections-history-list" style="display: flex; flex-direction: column; gap: 1rem;">
       {% if entries %}
@@ -84,7 +83,7 @@
 async function deleteSession(sessionId) {
     if (!confirm("Delete this conversation thread permanently?")) return;
     try {
-        const res = await fetch(`/api/chat/session/${sessionId}`, { method: 'DELETE' });
+        const res = await fetch(`/api/chat/session/${sessionId}`, { method: 'DELETE', headers: window.csrfHeaders() });
         if (res.ok) {
             window.location.href = "{{ url_for('emotional') }}";
         } else {
@@ -105,28 +104,25 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function appendChatBubble(text, isUser = false) {
         const bubble = document.createElement("div");
-        bubble.className = isUser ? "chat-bubble user-bubble" : "chat-bubble bot-bubble";
-        bubble.style.padding = "0.75rem 1rem";
-        bubble.style.maxWidth = "80%";
-        bubble.style.lineHeight = "1.4";
-        bubble.style.fontSize = "0.95rem";
-        
-        if (isUser) {
-            bubble.style.alignSelf = "flex-end";
-            bubble.style.backgroundColor = "#8c6d62";
-            bubble.style.color = "#ffffff";
-            bubble.style.borderRadius = "14px 14px 0px 14px";
-        } else {
-            bubble.style.alignSelf = "flex-start";
-            bubble.style.backgroundColor = "#eae1db";
-            bubble.style.color = "#2c2523";
-            bubble.style.fontStyle = "italic";
-            bubble.style.borderRadius = "14px 14px 14px 0px";
-        }
-        
-        bubble.innerText = text;
+        bubble.className = "chat-bubble " + (isUser ? "user-bubble" : "bot-bubble");
+        bubble.textContent = text;
         chatStreamBox.appendChild(bubble);
         chatStreamBox.scrollTop = chatStreamBox.scrollHeight;
+    }
+
+    let typingEl = null;
+    function setTyping(on) {
+        if (on && !typingEl) {
+            typingEl = document.createElement("div");
+            typingEl.className = "chat-bubble bot-bubble typing";
+            typingEl.setAttribute("aria-label", "CONNECT is typing");
+            for (let i = 0; i < 3; i++) typingEl.appendChild(document.createElement("span"));
+            chatStreamBox.appendChild(typingEl);
+            chatStreamBox.scrollTop = chatStreamBox.scrollHeight;
+        } else if (!on && typingEl) {
+            typingEl.remove();
+            typingEl = null;
+        }
     }
 
     entryTextarea.addEventListener("keypress", function(e) {
@@ -145,18 +141,25 @@ document.addEventListener("DOMContentLoaded", function() {
 
         submitBtn.disabled = true;
         submitBtn.innerText = "...";
+        setTyping(true);
 
         try {
             const response = await fetch("/api/chat/message", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: window.csrfHeaders({ "Content-Type": "application/json" }),
                 body: JSON.stringify({ message: messageVal })
             });
 
             if (!response.ok) throw new Error("Server error");
             const data = await response.json();
 
+            setTyping(false);
             appendChatBubble(data.reply, false);
+            if (data.crisis) {
+                document.getElementById("crisis-banner").hidden = false;
+            } else if (data.support_note) {
+                document.getElementById("support-note").hidden = false;
+            }
 
             if (data.is_first_message) {
                 const emptyMsg = historyList.querySelector(".no-entries-msg");
@@ -168,22 +171,41 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 const historyCard = document.createElement("article");
                 historyCard.className = "history-item";
-                historyCard.style.background = "#ffffff";
-                historyCard.style.padding = "1.25rem";
-                historyCard.style.borderRadius = "8px";
-                historyCard.style.borderLeft = "4px solid #8c6d62";
-                
-                historyCard.innerHTML = `
-                    <strong style="text-transform: capitalize; color: #8c6d62; font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">${data.detected_mood.replace("-", " ")}</strong>
-                    <p style="margin: 0 0 0.75rem 0; font-size: 0.95rem; color: #332a28; line-height: 1.4;">${data.reply}</p>
-                    <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px dashed #e1dbd6; padding-top: 0.5rem; margin-top: 0.5rem;">
-                      <small style="color: #a09288; font-size: 0.8rem;">${formattedDate}</small>
-                      <div style="display: flex; gap: 0.75rem; align-items: center;">
-                        <a href="{{ url_for('emotional') }}?session_id=${data.session_id}" style="text-decoration: none; color: #8c6d62; font-size: 0.82rem; font-weight: 600;">Continue Conversation &rarr;</a>
-                        <button onclick="deleteSession('${data.session_id}')" style="background: transparent; border: none; color: #b4503c; font-size: 0.82rem; font-weight: 600; cursor: pointer;">Delete</button>
-                      </div>
-                    </div>
-                `;
+                historyCard.style.cssText = "background:#fff; padding:1.25rem; border-radius:8px; border-left:4px solid #8c6d62;";
+
+                // Build with textContent — model output must never be parsed as HTML.
+                const moodLabel = document.createElement("strong");
+                moodLabel.style.cssText = "text-transform:capitalize; color:#8c6d62; font-size:0.85rem; display:block; margin-bottom:0.25rem;";
+                moodLabel.textContent = (data.detected_mood || "reflection").replace("-", " ");
+
+                const replyText = document.createElement("p");
+                replyText.style.cssText = "margin:0 0 0.75rem 0; font-size:0.95rem; color:#332a28; line-height:1.4;";
+                replyText.textContent = data.reply;
+
+                const footer = document.createElement("div");
+                footer.style.cssText = "display:flex; align-items:center; justify-content:space-between; border-top:1px dashed #e1dbd6; padding-top:0.5rem; margin-top:0.5rem;";
+
+                const dateEl = document.createElement("small");
+                dateEl.style.cssText = "color:#a09288; font-size:0.8rem;";
+                dateEl.textContent = formattedDate;
+
+                const actions = document.createElement("div");
+                actions.style.cssText = "display:flex; gap:0.75rem; align-items:center;";
+
+                const continueLink = document.createElement("a");
+                continueLink.href = "{{ url_for('emotional') }}?session_id=" + encodeURIComponent(data.session_id);
+                continueLink.style.cssText = "text-decoration:none; color:#8c6d62; font-size:0.82rem; font-weight:600;";
+                continueLink.textContent = "Continue Conversation \u2192";
+
+                const deleteBtn = document.createElement("button");
+                deleteBtn.type = "button";
+                deleteBtn.style.cssText = "background:transparent; border:none; color:#b4503c; font-size:0.82rem; font-weight:600; cursor:pointer;";
+                deleteBtn.textContent = "Delete";
+                deleteBtn.addEventListener("click", () => deleteSession(data.session_id));
+
+                actions.append(continueLink, deleteBtn);
+                footer.append(dateEl, actions);
+                historyCard.append(moodLabel, replyText, footer);
                 historyList.insertBefore(historyCard, historyList.firstChild);
             }
 
@@ -191,6 +213,7 @@ document.addEventListener("DOMContentLoaded", function() {
             console.error("Chat error:", error);
             appendChatBubble("I'm right here with you, but I had trouble updating right now. Please try again.", false);
         } finally {
+            setTyping(false);
             submitBtn.disabled = false;
             submitBtn.innerText = "Send";
         }

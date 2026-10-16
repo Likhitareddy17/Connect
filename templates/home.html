@@ -22,9 +22,16 @@
 
   <div class="pillar-grid">
     <a class="pillar-card spiritual" href="{{ url_for('spiritual') }}">
-      <strong>Spiritual</strong>
-      <span>Today's deity, mantra, vrat</span>
-    </a>
+  <strong>Spiritual</strong>
+  <span>
+    {% if religion == 'hindu' %}Today's deity, mantra, vrat
+    {% elif religion == 'islam' %}Prayer times, Hijri date
+    {% elif religion == 'christianity' %}Season, feasts, reflection
+    {% elif religion == 'sikh' %}Simran, Gurbani, Gurpurabs
+    {% else %}A quiet moment, today's observance
+    {% endif %}
+  </span>
+</a>
     <a class="pillar-card mental" href="{{ url_for('mental') }}">
       <strong>Mental</strong>
       <span>Breath and attention</span>

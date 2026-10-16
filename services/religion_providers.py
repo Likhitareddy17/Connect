@@ -64,6 +64,15 @@ RELIGION_LABELS = {
 
 # ── Hindu — thin wrapper around the existing, unchanged spiritual_api ──────
 
+
+_PANCHANG_PLACEHOLDER = "Pending Panchang API"
+
+
+def _live_or_blank(value: str) -> str:
+    """Hide the 'no live data' placeholder from short UI labels."""
+    return "" if value == _PANCHANG_PLACEHOLDER else value
+
+
 class HinduProvider:
     religion = "hindu"
 
@@ -87,7 +96,7 @@ class HinduProvider:
             "religion": self.religion,
             "date": daily["date"],
             "weekday": daily["panchangam"].get("weekday") or target.strftime("%A"),
-            "calendar_label": daily["panchangam"].get("lunar_month", ""),
+            "calendar_label": _live_or_blank(daily["panchangam"].get("lunar_month", "")),
             "headline": daily["deity"],
             "occasion": occasion,
             "guidance_title": "How to observe today" if occasion else "Today's worship",
@@ -209,10 +218,10 @@ def _easter_date(year: int) -> date:
     h = (19 * a + b - d - g + 15) % 30
     i = c // 4
     k = c % 4
-    l = (32 + 2 * e + 2 * i - h - k) % 7
-    m = (a + 11 * h + 22 * l) // 451
-    month = (h + l - 7 * m + 114) // 31
-    day = ((h + l - 7 * m + 114) % 31) + 1
+    weekday_offset = (32 + 2 * e + 2 * i - h - k) % 7  # 'l' in the published algorithm
+    m = (a + 11 * h + 22 * weekday_offset) // 451
+    month = (h + weekday_offset - 7 * m + 114) // 31
+    day = ((h + weekday_offset - 7 * m + 114) % 31) + 1
     return date(year, month, day)
 
 

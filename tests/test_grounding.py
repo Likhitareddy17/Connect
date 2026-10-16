@@ -3,8 +3,7 @@ Unit tests for grounding.py practice recommendation logic.
 """
 from datetime import datetime
 
-import pytest
-from services.grounding import recommend_practices, time_of_day, PRACTICES
+from services.grounding import PRACTICES, recommend_practices, time_of_day
 
 
 class TestTimeOfDay:
