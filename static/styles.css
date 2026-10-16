@@ -681,3 +681,13 @@ textarea {
   background-repeat: no-repeat;
   background-position: right 14px center;
 }
+
+/* <button> that looks like a text link (used for POST-based sign out) */
+.logout-form { display: inline; margin: 0; }
+button.linklike {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}

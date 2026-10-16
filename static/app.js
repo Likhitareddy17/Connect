@@ -65,7 +65,7 @@ function saveJaapCount(count) {
   jaapSaveTimer = setTimeout(() => {
     fetch(mantraCard.dataset.saveUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: window.csrfHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ count }),
     })
       .then((response) => {

@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="{% block meta_description %}CONNECT is a calm space for spiritual, mental, and emotional well-being.{% endblock %}">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>{% block title %}CONNECT{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
@@ -21,13 +22,17 @@
       <div class="topbar-right">
         <a href="{{ url_for('dashboard') }}" class="topbar-link">Dashboard</a>
         <form method="post" action="{{ url_for('settings') }}" class="goal-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <select name="daily_goal" onchange="this.form.submit()" aria-label="Daily goal">
             {% for goal in ['grounding','clarity','energy','gratitude'] %}
               <option value="{{ goal }}" {% if current_user.daily_goal == goal %}selected{% endif %}>{{ goal }}</option>
             {% endfor %}
           </select>
         </form>
-        <a href="{{ url_for('logout') }}" class="topbar-link muted">Sign out</a>
+        <form method="post" action="{{ url_for('logout') }}" class="logout-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="topbar-link muted linklike">Sign out</button>
+        </form>
       </div>
       {% endif %}
     </header>
@@ -46,6 +51,12 @@
   </nav>
   {% endif %}
 
+  <script>
+    window.csrfHeaders = function (extra) {
+      const token = document.querySelector('meta[name="csrf-token"]').content;
+      return Object.assign({ "X-CSRFToken": token }, extra || {});
+    };
+  </script>
   <script src="{{ url_for('static', filename='app.js') }}"></script>
   {% block scripts %}{% endblock %}
 </body>

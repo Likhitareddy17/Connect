@@ -32,6 +32,7 @@
       <span>settings</span>
     </div>
     <form method="post" action="{{ url_for('settings') }}" class="profile-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label class="field-label" for="display_name_input">Display name</label>
       <input id="display_name_input" type="text" name="display_name"
              value="{{ current_user.display_name }}" placeholder="Friend">
