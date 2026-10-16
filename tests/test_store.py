@@ -1,8 +1,9 @@
 """
 Unit tests for ConnectStore — uses a mock DB connection pool to avoid MySQL dependency.
 """
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, patch, call
 
 
 @pytest.fixture

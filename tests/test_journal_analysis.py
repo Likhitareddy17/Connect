@@ -1,99 +1,144 @@
-"""
-Unit tests for journal_analysis.py.
-No real network calls are made — the Groq request is mocked.
-"""
-import os
+"""Unit tests for the chat pipeline: crisis screening, LLM parsing, fallbacks."""
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from services.journal_analysis import (
-    CRISIS_RESPONSE,
+    SOURCE_CRISIS,
+    SOURCE_FALLBACK,
+    SOURCE_LLM,
+    check_regex_crisis,
     generate_chat_response,
-    is_crisis_message,
 )
 
 
-class TestIsCrisisMessage:
-    def test_detects_suicide_mention(self):
-        assert is_crisis_message("I don't want to be here, thinking about suicide")
+def history(*texts):
+    return [{"role": "user", "content": t} for t in texts]
 
-    def test_detects_self_harm_mention(self):
-        assert is_crisis_message("I keep wanting to hurt myself")
 
-    def test_case_insensitive(self):
-        assert is_crisis_message("I WANT TO DIE")
+def llm_reply(content: str, status: int = 200):
+    res = MagicMock(status_code=status)
+    res.raise_for_status = MagicMock()
+    res.json.return_value = {"choices": [{"message": {"content": content}}]}
+    return res
 
-    def test_ordinary_message_is_not_crisis(self):
-        assert not is_crisis_message("I had a stressful day at college")
+
+@pytest.fixture(autouse=True)
+def groq_key(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "test-key")
+
+
+class TestCrisisScreen:
+    @pytest.mark.parametrize("text", [
+        "I want to kill myself",
+        "I've been thinking about suicide",
+        "i just want to die",
+        "I don't want to be here anymore",
+        "everyone would be better off without me",
+        "I keep hurting myself",
+        "I can't go on like this",
+        "I'm going to end it all",
+    ])
+    def test_self_harm_detected(self, text):
+        reply, mood = check_regex_crisis(text)
+        assert reply is not None and mood == "overwhelmed"
+
+    @pytest.mark.parametrize("text", [
+        "my husband hits me when he's drunk",
+        "she beats me every night",
+        "I was sexually assaulted last year",
+        "I'm being abused at home",
+    ])
+    def test_abuse_detected(self, text):
+        reply, _ = check_regex_crisis(text)
+        assert reply is not None
+
+    @pytest.mark.parametrize("text", [
+        "it hit me that I'm just tired",            # 'hit me' idiom
+        "the deadline is killing me",                # figurative
+        "I'm dying to see my friends",               # figurative
+        "work was exhausting but I'm okay",
+        "I feel anxious about my exam",
+        "I cut my finger while cooking",
+    ])
+    def test_everyday_language_not_flagged(self, text):
+        assert check_regex_crisis(text) == (None, None)
 
 
 class TestGenerateChatResponse:
-    def test_crisis_message_skips_the_llm_entirely(self, mocker):
-        mock_post = mocker.patch("services.journal_analysis.requests.post")
-        history = [{"role": "user", "content": "I want to end my life"}]
+    def test_crisis_skips_llm_entirely(self):
+        with patch("services.journal_analysis.requests.post") as post:
+            result = generate_chat_response(history("I want to kill myself"))
+        post.assert_not_called()
+        assert result.source == SOURCE_CRISIS and result.is_crisis
+        assert result.mood == "overwhelmed"
 
-        reply, mood = generate_chat_response(history)
+    def test_crisis_checks_the_latest_message_not_the_first(self):
+        with patch("services.journal_analysis.requests.post") as post:
+            result = generate_chat_response(history("hi", "ok thanks", "I want to die"))
+        post.assert_not_called()
+        assert result.is_crisis
 
-        assert reply == CRISIS_RESPONSE
-        assert mood == "overwhelmed"
-        mock_post.assert_not_called()
+    def test_missing_api_key_gives_fallback_without_mood(self, monkeypatch):
+        monkeypatch.setenv("GROQ_API_KEY", "")
+        result = generate_chat_response(history("I feel low"))
+        assert result.source == SOURCE_FALLBACK
+        assert result.mood is None  # must not be recorded as a real mood
 
-    def test_missing_api_key_returns_safe_fallback(self, mocker):
-        mocker.patch.dict(os.environ, {"GROQ_API_KEY": ""})
-        history = [{"role": "user", "content": "I had a long day"}]
+    def test_llm_success(self):
+        with patch("services.journal_analysis.requests.post",
+                   return_value=llm_reply('{"reply": "I hear you.", "mood": "stressed"}')):
+            result = generate_chat_response(history("I'm nervous"))
+        assert (result.reply, result.mood, result.source) == ("I hear you.", "stressed", SOURCE_LLM)
 
-        reply, mood = generate_chat_response(history)
+    def test_invalid_mood_from_model_is_normalised(self):
+        with patch("services.journal_analysis.requests.post",
+                   return_value=llm_reply('{"reply": "Okay.", "mood": "ecstatic-banana"}')):
+            result = generate_chat_response(history("hello"))
+        assert result.mood == "calm" and result.source == SOURCE_LLM
 
-        assert "not able to respond fully" in reply
-        assert mood == "calm"
+    def test_json_wrapped_in_prose_is_extracted(self):
+        raw = 'Sure! {"reply": "Take a breath.", "mood": "calm"} hope that helps'
+        with patch("services.journal_analysis.requests.post", return_value=llm_reply(raw)):
+            assert generate_chat_response(history("hi")).reply == "Take a breath."
 
-    def test_successful_groq_call_returns_reply_and_mood(self, mocker):
-        mocker.patch.dict(os.environ, {"GROQ_API_KEY": "test-key"})
-        mock_response = mocker.Mock()
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": '{"reply": "That sounds really tough.", "mood": "stressed"}'}}]
-        }
-        mocker.patch("services.journal_analysis.requests.post", return_value=mock_response)
-        history = [{"role": "user", "content": "I have so much pressure at work"}]
+    def test_garbage_model_output_falls_back(self):
+        with patch("services.journal_analysis.requests.post", return_value=llm_reply("not json at all")):
+            result = generate_chat_response(history("hi"))
+        assert result.source == SOURCE_FALLBACK and result.mood is None
 
-        reply, mood = generate_chat_response(history)
+    def test_empty_reply_falls_back(self):
+        with patch("services.journal_analysis.requests.post",
+                   return_value=llm_reply('{"reply": "  ", "mood": "calm"}')):
+            assert generate_chat_response(history("hi")).source == SOURCE_FALLBACK
 
-        assert reply == "That sounds really tough."
-        assert mood == "stressed"
+    def test_network_error_falls_back(self):
+        with patch("services.journal_analysis.requests.post", side_effect=TimeoutError("slow")):
+            result = generate_chat_response(history("hi"))
+        assert result.source == SOURCE_FALLBACK
 
-    def test_handles_negation_via_the_model_not_keywords(self, mocker):
-        # The model, not a keyword list, decides the mood — so it can
-        # correctly read "not stressed" as NOT stressed. This test just
-        # confirms we trust whatever valid mood the model returns.
-        mocker.patch.dict(os.environ, {"GROQ_API_KEY": "test-key"})
-        mock_response = mocker.Mock()
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": '{"reply": "Glad to hear that.", "mood": "calm"}'}}]
-        }
-        mocker.patch("services.journal_analysis.requests.post", return_value=mock_response)
-        history = [{"role": "user", "content": "Honestly I'm not stressed about the exam anymore"}]
+    def test_only_recent_window_is_sent_and_truncated(self):
+        long_history = history(*[f"message {i} " + "x" * 600 for i in range(10)])
+        with patch("services.journal_analysis.requests.post",
+                   return_value=llm_reply('{"reply": "ok", "mood": "calm"}')) as post:
+            generate_chat_response(long_history, total_messages=10)
+        sent = post.call_args.kwargs["json"]["messages"]
+        user_msgs = [m for m in sent if m["role"] == "user"]
+        assert len(user_msgs) == 6
+        assert all(len(m["content"]) <= 500 for m in user_msgs)
 
-        reply, mood = generate_chat_response(history)
+    def test_summary_refreshes_on_real_thread_length_not_window_size(self):
+        calls = []
 
-        assert mood == "calm"
+        def fake_post(url, **kwargs):
+            calls.append(kwargs["json"].get("max_tokens"))
+            return llm_reply('{"reply": "ok", "mood": "calm"}') if kwargs["json"].get("max_tokens") == 400 \
+                else llm_reply("new summary")
 
-    def test_invalid_mood_from_model_falls_back_to_calm(self, mocker):
-        mocker.patch.dict(os.environ, {"GROQ_API_KEY": "test-key"})
-        mock_response = mocker.Mock()
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": '{"reply": "I see.", "mood": "confused"}'}}]
-        }
-        mocker.patch("services.journal_analysis.requests.post", return_value=mock_response)
-        history = [{"role": "user", "content": "I had a long day"}]
-
-        reply, mood = generate_chat_response(history)
-
-        assert mood == "calm"
-
-    def test_groq_failure_returns_safe_fallback(self, mocker):
-        mocker.patch.dict(os.environ, {"GROQ_API_KEY": "test-key"})
-        mocker.patch("services.journal_analysis.requests.post", side_effect=Exception("timeout"))
-        history = [{"role": "user", "content": "I had a long day"}]
-
-        reply, mood = generate_chat_response(history)
-
-        assert "right here with you" in reply
-        assert mood == "calm"
+        with patch("services.journal_analysis.requests.post", side_effect=fake_post):
+            # window is always 6 long (6 % 3 == 0) but the thread really has 7 messages -> no refresh
+            generate_chat_response(history(*["m"] * 6), "old", total_messages=7)
+            assert calls == [400]
+            calls.clear()
+            result = generate_chat_response(history(*["m"] * 6), "old", total_messages=9)
+            assert 150 in calls and result.summary == "new summary"

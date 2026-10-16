@@ -5,7 +5,8 @@ from datetime import date
 from unittest.mock import patch
 
 import pytest
-from services.spiritual_api import SpiritualApi, WEEKDAY_DEVOTION, DATE_OVERRIDES
+
+from services.spiritual_api import DATE_OVERRIDES, WEEKDAY_DEVOTION, SpiritualApi
 
 
 @pytest.fixture
