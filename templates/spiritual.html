@@ -9,25 +9,26 @@
     <p class="soft-text" id="sp-calendar-label">{{ daily.calendar_label }}</p>
   </section>
 
-  <div class="spiritual-layout" style="display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; align-items: start;">
+  <div class="spiritual-layout">
 
     <!-- Main religion-specific content, re-rendered on every date click -->
-    <div id="sp-main-content" style="display: flex; flex-direction: column; gap: 1.5rem;">
+    <div id="sp-main-content" class="sp-main">
       <!-- filled by renderDay() on load -->
     </div>
 
     <!-- Calendar + upcoming, top-right -->
-    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+    <aside class="sp-side">
       <section class="card" id="sp-calendar-card">
         <div class="card-title">
           <h2 id="sp-cal-month-label">Calendar</h2>
         </div>
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem;">
+        <div class="cal-nav">
           <button class="round-btn" id="sp-cal-prev" type="button" aria-label="Previous month">‹</button>
           <strong id="sp-cal-title"></strong>
           <button class="round-btn" id="sp-cal-next" type="button" aria-label="Next month">›</button>
         </div>
-        <div id="sp-cal-grid" style="display:grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align:center; font-size: 0.8rem;"></div>
+        <div id="sp-cal-grid" class="cal-grid" role="grid" aria-labelledby="sp-cal-title"></div>
+        <p class="cal-legend"><span class="cal-dot"></span> festival or observance</p>
       </section>
 
       <section class="card">
@@ -40,7 +41,7 @@
           {% endfor %}
         </ul>
       </section>
-    </div>
+    </aside>
   </div>
 {% endblock %}
 
@@ -52,6 +53,8 @@ const DAY_API_URL = {{ url_for('api_spiritual_day') | tojson }};
 let currentDaily = {{ daily | tojson }};
 let currentJaapCount = {{ jaap_count | tojson }};
 let calMonth; // Date object, first of the month currently shown
+const FESTIVALS = Object.fromEntries({{ upcoming | tojson }}.map(i => [i.date, i.name]));
+let selectedIso = currentDaily.date;
 
 function escapeHtml(s) {
   return (s || "").toString().replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -77,12 +80,14 @@ function renderHindu(daily, jaapCount) {
   const extra = daily.extra;
   const p = extra.panchangam || {};
   // Draw only the fields we actually have; never show an empty or placeholder card.
-  const panchangRows = [
+  const panchangFields = [
     ["Vara", p.weekday], ["Tithi", p.tithi], ["Nakshatra", p.nakshatra], ["Yoga", p.yoga],
     ["Karana", p.karana], ["Lunar month", p.lunar_month], ["Sunrise", p.sunrise], ["Sunset", p.sunset],
     ["Rahu Kalam", p.rahu_kalam], ["Abhijit", p.abhijit_muhurat],
-  ].filter(([, value]) => value && !/^pending/i.test(value))
-   .map(([label, value]) => `<div><strong>${label}</strong><span>${escapeHtml(value)}</span></div>`).join("");
+  ].filter(([, value]) => value && !/^pending/i.test(value));
+  const panchangHtml = panchangFields.length >= 3
+    ? `<div class="panchang-grid">${panchangFields.map(([label, value]) => `<div><strong>${label}</strong><span>${escapeHtml(value)}</span></div>`).join("")}</div>`
+    : `<p class="panchang-lite">${panchangFields.map(([label, value]) => `<span><em>${label}</em> ${escapeHtml(value)}</span>`).join("")}</p>`;
   const fastHow = (extra.fast?.how || []).map(i => `<li>${escapeHtml(i)}</li>`).join("");
   const fastBreak = (extra.fast?.["break"] || []).map(i => `<li>${escapeHtml(i)}</li>`).join("");
   const festivals = (extra.festivals || []).map(f =>
@@ -92,7 +97,7 @@ function renderHindu(daily, jaapCount) {
   return `
     <section class="card panchang-card">
       <div class="card-title"><h2>Panchangam</h2><span>${escapeHtml(p.location || "")}</span></div>
-      <div class="panchang-grid">${panchangRows}</div>
+      ${panchangHtml}
       <p class="source-note">${escapeHtml(p.source_note || "")}</p>
     </section>
 
@@ -320,30 +325,29 @@ function renderCalendar() {
   grid.innerHTML = "";
   ["S","M","T","W","T","F","S"].forEach(d => {
     const el = document.createElement("div");
+    el.className = "cal-dow";
     el.textContent = d;
-    el.style.fontWeight = "600";
-    el.style.color = "#a09288";
     grid.appendChild(el);
   });
 
   const firstWeekday = new Date(y, m, 1).getDay();
   const daysInMonth = new Date(y, m + 1, 0).getDate();
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const now = new Date();  // local date: toISOString() is UTC and shows "yesterday" in India before 5:30am
+  const todayIso = isoOf(now.getFullYear(), now.getMonth(), now.getDate());
 
   for (let i = 0; i < firstWeekday; i++) grid.appendChild(document.createElement("div"));
 
   for (let d = 1; d <= daysInMonth; d++) {
     const iso = isoOf(y, m, d);
+    const festival = FESTIVALS[iso];
     const cell = document.createElement("button");
     cell.type = "button";
     cell.textContent = d;
-    cell.style.padding = "0.4rem 0";
-    cell.style.border = "1px solid #e1dbd6";
-    cell.style.borderRadius = "6px";
-    cell.style.background = iso === todayIso ? "#8c6d62" : "#ffffff";
-    cell.style.color = iso === todayIso ? "#ffffff" : "#332a28";
-    cell.style.cursor = "pointer";
-    cell.addEventListener("click", () => loadDay(iso));
+    cell.className = "cal-cell" + (iso === todayIso ? " today" : "") + (iso === selectedIso ? " selected" : "") + (festival ? " has-festival" : "");
+    cell.setAttribute("aria-label", `${d} ${calMonth.toLocaleDateString("en-US", { month: "long" })}${festival ? ", " + festival : ""}${iso === todayIso ? ", today" : ""}`);
+    cell.setAttribute("aria-pressed", iso === selectedIso ? "true" : "false");
+    if (festival) cell.title = festival;
+    cell.addEventListener("click", () => { selectedIso = iso; renderCalendar(); loadDay(iso); });
     grid.appendChild(cell);
   }
 }

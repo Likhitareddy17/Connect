@@ -47,9 +47,9 @@
   {% if current_user.is_authenticated %}
   <nav class="bottom-nav" aria-label="Primary">
     <a href="{{ url_for('home') }}" class="{% if request.endpoint == 'home' %}active{% endif %}">Home</a>
-    <a href="{{ url_for('spiritual') }}" class="{% if request.endpoint == 'spiritual' %}active{% endif %}">Spirit</a>
+    <a href="{{ url_for('spiritual') }}" class="{% if request.endpoint == 'spiritual' %}active{% endif %}"><span class="nav-full">Spiritual</span><span class="nav-short">Spirit</span></a>
     <a href="{{ url_for('mental') }}" class="{% if request.endpoint == 'mental' %}active{% endif %}">Mental</a>
-    <a href="{{ url_for('emotional') }}" class="{% if request.endpoint == 'emotional' %}active{% endif %}">Emotion</a>
+    <a href="{{ url_for('emotional') }}" class="{% if request.endpoint == 'emotional' %}active{% endif %}"><span class="nav-full">Emotional</span><span class="nav-short">Emotion</span></a>
   </nav>
   {% endif %}
 
