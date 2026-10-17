@@ -756,3 +756,34 @@ h1 { letter-spacing: -0.02em; text-wrap: balance; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* ── Spiritual page layout and calendar ───────────────────────────────────── */
+.spiritual-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
+.sp-main { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.sp-side { display: flex; flex-direction: column; gap: 24px; position: sticky; top: 16px; }
+
+.cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; font-size: .8rem; }
+.cal-dow { font-weight: 700; color: var(--muted); padding: 4px 0; }
+.cal-cell { position: relative; padding: 8px 0; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); cursor: pointer; font: inherit; font-size: .85rem; transition: background-color .12s, border-color .12s; }
+.cal-cell:hover { background: rgba(140, 109, 98, .12); }
+.cal-cell.today { border-color: var(--spiritual); font-weight: 800; }
+.cal-cell.selected { background: var(--spiritual); border-color: var(--spiritual); color: #fffaf2; }
+.cal-cell.has-festival::after, .cal-dot { content: ""; width: 5px; height: 5px; border-radius: 50%; background: #c9822b; }
+.cal-cell.has-festival::after { position: absolute; left: 50%; bottom: 3px; transform: translateX(-50%); }
+.cal-cell.selected.has-festival::after { background: #fffaf2; }
+.cal-legend { display: flex; align-items: center; gap: 6px; margin: 10px 2px 0; font-size: .75rem; color: var(--muted); }
+.cal-dot { display: inline-block; }
+
+.panchang-lite { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 4px 0 0; font-size: 1rem; }
+.panchang-lite em { font-style: normal; font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--spiritual); margin-right: 4px; }
+
+.nav-short { display: none; }
+@media (max-width: 860px) {
+  .spiritual-layout { grid-template-columns: 1fr; }
+  .sp-side { position: static; order: -1; }  /* calendar first on small screens */
+}
+@media (max-width: 420px) {
+  .nav-full { display: none; }
+  .nav-short { display: inline; }
+}

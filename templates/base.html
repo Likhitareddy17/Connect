@@ -25,7 +25,7 @@
         <a href="{{ url_for('dashboard') }}" class="topbar-link">Dashboard</a>
         <form method="post" action="{{ url_for('settings') }}" class="goal-form">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <select name="daily_goal" onchange="this.form.submit()" aria-label="Daily goal">
+          <select name="daily_goal" onchange="this.form.submit()" aria-label="Daily goal" title="Your daily focus">
             {% for goal in ['grounding','clarity','energy','gratitude'] %}
               <option value="{{ goal }}" {% if current_user.daily_goal == goal %}selected{% endif %}>{{ goal }}</option>
             {% endfor %}
@@ -47,9 +47,9 @@
   {% if current_user.is_authenticated %}
   <nav class="bottom-nav" aria-label="Primary">
     <a href="{{ url_for('home') }}" class="{% if request.endpoint == 'home' %}active{% endif %}">Home</a>
-    <a href="{{ url_for('spiritual') }}" class="{% if request.endpoint == 'spiritual' %}active{% endif %}">Spirit</a>
+    <a href="{{ url_for('spiritual') }}" class="{% if request.endpoint == 'spiritual' %}active{% endif %}"><span class="nav-full">Spiritual</span><span class="nav-short">Spirit</span></a>
     <a href="{{ url_for('mental') }}" class="{% if request.endpoint == 'mental' %}active{% endif %}">Mental</a>
-    <a href="{{ url_for('emotional') }}" class="{% if request.endpoint == 'emotional' %}active{% endif %}">Emotion</a>
+    <a href="{{ url_for('emotional') }}" class="{% if request.endpoint == 'emotional' %}active{% endif %}"><span class="nav-full">Emotional</span><span class="nav-short">Emotion</span></a>
   </nav>
   {% endif %}
 
