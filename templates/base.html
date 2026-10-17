@@ -25,7 +25,7 @@
         <a href="{{ url_for('dashboard') }}" class="topbar-link">Dashboard</a>
         <form method="post" action="{{ url_for('settings') }}" class="goal-form">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <select name="daily_goal" onchange="this.form.submit()" aria-label="Daily goal">
+          <select name="daily_goal" onchange="this.form.submit()" aria-label="Daily goal" title="Your daily focus">
             {% for goal in ['grounding','clarity','energy','gratitude'] %}
               <option value="{{ goal }}" {% if current_user.daily_goal == goal %}selected{% endif %}>{{ goal }}</option>
             {% endfor %}

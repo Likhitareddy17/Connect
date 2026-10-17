@@ -131,6 +131,17 @@ _MOCK_PANCHANG = {
     "source_note": "Mock fallback — connect Prokerala API for live data.",
 }
 
+_OFFLINE_NOTE = (
+    "Only today's weekday is shown. Tithi, nakshatra and timings need a live panchang source, "
+    "which isn't connected right now."
+)
+
+
+def _real_values_only(panchang: dict) -> dict:
+    """Drop 'Pending ...' placeholders so the UI shows only what we actually know."""
+    return {k: v for k, v in panchang.items() if not (isinstance(v, str) and v.startswith("Pending"))}
+
+
 # Variable tracking token expiration to prevent unnecessary API overloads
 _cached_token: str | None = None
 _token_expires_at: datetime | None = None
@@ -286,8 +297,9 @@ class SpiritualApi:
             logger.warning("Panchang lookup crashed, falling back to mock: %s", exc)
             live_panchang = None
 
-        mock = _MOCK_PANCHANG.copy()
+        mock = _real_values_only(_MOCK_PANCHANG)
         mock["weekday"] = target.strftime("%A")
+        mock["source_note"] = _OFFLINE_NOTE
         panchang = live_panchang or override.get("panchangam", mock)
 
         daily: dict = {

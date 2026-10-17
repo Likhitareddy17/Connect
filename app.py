@@ -178,7 +178,7 @@ def build_guidance(user: User) -> dict:
     practices = recommend_practices(mood=mood, goal=user.daily_goal, limit=3)
     return {
         "focus": daily["headline"],
-        "tone": daily.get("calendar_label") or "",
+        "tone": daily.get("calendar_label") or daily.get("weekday") or "",
         "reflection": daily["guidance_steps"][0] if daily["guidance_steps"] else "",
         "action": practices[0] if practices else "Take a mindful pause.",
         "mood": mood,

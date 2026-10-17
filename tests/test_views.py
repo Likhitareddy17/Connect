@@ -74,3 +74,37 @@ class TestChatPage:
         used = {c for m in re.findall(r'class="([^"]*)"', page) for c in m.split()}
         unstyled = {c for c in used if f".{c}" not in css} - {"no-entries-msg", "journal-form", "card"}
         assert unstyled == set(), unstyled
+
+
+class TestNoDeveloperPlaceholdersInTheUi:
+    @pytest.mark.parametrize("religion", SPIRITUAL_CARD_TEXT)
+    def test_spiritual_day_api_has_no_placeholder_text(self, client_for, religion):
+        body = client_for(religion).get("/api/spiritual/day?date=2026-10-17").get_data(as_text=True)
+        for leftover in ("Pending Panchang", "Pending location", "Mock fallback", "connect Prokerala"):
+            assert leftover not in body, leftover
+
+    def test_offline_hindu_panchang_shows_only_what_is_known(self, client_for):
+        data = client_for("hindu").get("/api/spiritual/day?date=2026-10-17").get_json()
+        panchang = data["daily"]["extra"]["panchangam"]
+        assert panchang["weekday"] == "Saturday"
+        assert not {"tithi", "nakshatra", "yoga", "karana", "sunrise", "sunset"} & set(panchang)
+        assert "weekday" in panchang["source_note"]
+
+    def test_home_chips_explain_themselves_and_header_shows_the_weekday(self, client_for):
+        page = client_for("hindu").get("/").get_data(as_text=True)
+        assert "Last check-in:" in page and "Try:" in page
+        weekdays = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+        assert any(f"<span>{day}</span>" in page for day in weekdays)  # weekday label in the card header
+
+    def test_spiritual_page_script_is_valid_javascript(self, client_for, tmp_path):
+        import re
+        import shutil
+        import subprocess
+        node = shutil.which("node")
+        if not node:
+            pytest.skip("node is not installed")
+        html = client_for("hindu").get("/spiritual").get_data(as_text=True)
+        script = tmp_path / "page.js"
+        script.write_text("\n".join(re.findall(r"<script>(.*?)</script>", html, re.S)), encoding="utf-8")
+        result = subprocess.run([node, "--check", str(script)], capture_output=True, text=True)
+        assert result.returncode == 0, result.stderr

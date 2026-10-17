@@ -76,6 +76,13 @@ function renderGuidance(daily) {
 function renderHindu(daily, jaapCount) {
   const extra = daily.extra;
   const p = extra.panchangam || {};
+  // Draw only the fields we actually have; never show an empty or placeholder card.
+  const panchangRows = [
+    ["Vara", p.weekday], ["Tithi", p.tithi], ["Nakshatra", p.nakshatra], ["Yoga", p.yoga],
+    ["Karana", p.karana], ["Lunar month", p.lunar_month], ["Sunrise", p.sunrise], ["Sunset", p.sunset],
+    ["Rahu Kalam", p.rahu_kalam], ["Abhijit", p.abhijit_muhurat],
+  ].filter(([, value]) => value && !/^pending/i.test(value))
+   .map(([label, value]) => `<div><strong>${label}</strong><span>${escapeHtml(value)}</span></div>`).join("");
   const fastHow = (extra.fast?.how || []).map(i => `<li>${escapeHtml(i)}</li>`).join("");
   const fastBreak = (extra.fast?.["break"] || []).map(i => `<li>${escapeHtml(i)}</li>`).join("");
   const festivals = (extra.festivals || []).map(f =>
@@ -85,19 +92,8 @@ function renderHindu(daily, jaapCount) {
   return `
     <section class="card panchang-card">
       <div class="card-title"><h2>Panchangam</h2><span>${escapeHtml(p.location || "")}</span></div>
-      <div class="panchang-grid">
-        <div><strong>Vara</strong><span>${escapeHtml(p.weekday)}</span></div>
-        <div><strong>Tithi</strong><span>${escapeHtml(p.tithi)}</span></div>
-        <div><strong>Nakshatra</strong><span>${escapeHtml(p.nakshatra)}</span></div>
-        <div><strong>Yoga</strong><span>${escapeHtml(p.yoga)}</span></div>
-        <div><strong>Karana</strong><span>${escapeHtml(p.karana)}</span></div>
-        <div><strong>Lunar month</strong><span>${escapeHtml(p.lunar_month)}</span></div>
-        <div><strong>Sunrise</strong><span>${escapeHtml(p.sunrise)}</span></div>
-        <div><strong>Sunset</strong><span>${escapeHtml(p.sunset)}</span></div>
-        <div><strong>Rahu Kalam</strong><span>${escapeHtml(p.rahu_kalam)}</span></div>
-        <div><strong>Abhijit</strong><span>${escapeHtml(p.abhijit_muhurat)}</span></div>
-      </div>
-      <p class="source-note">${escapeHtml(p.source_note)}</p>
+      <div class="panchang-grid">${panchangRows}</div>
+      <p class="source-note">${escapeHtml(p.source_note || "")}</p>
     </section>
 
     <section class="card mantra-card" id="mantra-card" data-mantra="${escapeHtml(extra.audio_text)}" data-save-url="${JAAP_SAVE_URL}">
