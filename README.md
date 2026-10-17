@@ -120,8 +120,8 @@ Health endpoints: `GET /healthz` (process up) and `GET /readyz` (database reacha
 ## Tests
 
 ```bash
-pytest                                  # 146 unit/route tests, no database or network needed
-MYSQL_TEST_HOST=127.0.0.1 MYSQL_TEST_PASSWORD=... pytest     # + 10 integration tests on a real MySQL
+pytest                                  # 196 unit/route tests, no database or network needed
+MYSQL_TEST_HOST=127.0.0.1 MYSQL_TEST_PASSWORD=... pytest     # + 12 integration tests on a real MySQL
 ruff check .
 ```
 
@@ -130,18 +130,30 @@ ruff check .
 - Regression tests exist for each bug found in review (history window, cross-user thread access, open redirect, …).
 - CI (`.github/workflows/ci.yml`) runs lint + all tests against a MySQL 8 service container, then runs `init_db.py` twice.
 
-## Deployment (Render)
+## Deployment (Render + managed MySQL)
 
-`render.yaml` defines the web service (health check `/healthz`, `TRUST_PROXY=1`, generated secret key).
-Provision any managed MySQL 8, set the `MYSQL_*` and `GROQ_API_KEY` variables, run `python init_db.py` once against it,
-and set `LIMITER_STORAGE_URI` to a Redis URL so rate limits are shared across Gunicorn workers.
+Render hosts the web service; the database must be a MySQL 8 instance from any provider (Render's own managed
+databases are PostgreSQL). Check the provider's current free-tier limits (idle shutdown, expiry, connection caps).
+
+1. **Create the MySQL database** and note host, port, user, password and database name.
+2. **Create the schema once from your machine** (the database may already exist and your user may be unable to create
+   databases; `init_db.py` handles both, and it can also upgrade older databases):
+   ```bash
+   MYSQL_HOST=... MYSQL_PORT=... MYSQL_USER=... MYSQL_PASSWORD=... MYSQL_DATABASE=<the db your provider gave you> python init_db.py
+   ```
+3. **TLS.** Most managed hosts require it. The driver negotiates TLS by default; for verified TLS commit the provider's
+   (public) CA certificate, e.g. as `certs/ca.pem`, and set `MYSQL_SSL_CA=certs/ca.pem` and `MYSQL_SSL_VERIFY=1`.
+4. **Create a Render Blueprint** from this repo (it reads `render.yaml`: health check `/healthz`, `TRUST_PROXY=1`, generated
+   `FLASK_SECRET_KEY`). Set `MYSQL_*` and `GROQ_API_KEY` in the dashboard, never in the repo. Optionally set
+   `LIMITER_STORAGE_URI` to a Redis URL so rate limits are shared across Gunicorn workers.
+5. **Verify:** `/healthz` (process up) and `/readyz` (database reachable), then register, chat, and try a crisis phrase.
 
 ## Project layout
 
 ```
 app.py                  routes, auth, CSRF, security headers, health checks
 store.py                MySQL data layer (pooled, parameterised)
-schema.sql / init_db.py schema + idempotent upgrade script
+schema.sql / init_db.py tables + idempotent create/upgrade script (works on managed hosts)
 services/
   journal_analysis.py   crisis screen, Groq call, rolling summary, ChatResult
   grounding.py          mood → practice recommendation
