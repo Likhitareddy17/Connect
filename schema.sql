@@ -1,8 +1,5 @@
-CREATE DATABASE IF NOT EXISTS connect_mvp
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
-
-USE connect_mvp;
+-- Tables only. init_db.py creates (when permitted) and selects the database named by MYSQL_DATABASE,
+-- so this file also works on managed hosts that give you one fixed database.
 
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,

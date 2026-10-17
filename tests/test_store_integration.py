@@ -8,13 +8,12 @@ fresh install (the README's setup steps) actually works.
 """
 import os
 import uuid
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import mysql.connector
 import pytest
 
-from init_db import split_sql
+from init_db import initialize
 
 pytestmark = pytest.mark.skipif(
     not os.getenv("MYSQL_TEST_HOST"), reason="set MYSQL_TEST_HOST to run database integration tests"
@@ -31,13 +30,10 @@ def real_store():
         "user": os.getenv("MYSQL_TEST_USER", "root"),
         "password": os.getenv("MYSQL_TEST_PASSWORD", ""),
     }
-    schema = Path(__file__).resolve().parent.parent.joinpath("schema.sql").read_text(encoding="utf-8")
     with mysql.connector.connect(**conn_args) as conn:
-        cur = conn.cursor()
-        cur.execute(f"DROP DATABASE IF EXISTS {TEST_DB}")
-        for stmt in split_sql(schema.replace("connect_mvp", TEST_DB)):
-            cur.execute(stmt)
+        conn.cursor().execute(f"DROP DATABASE IF EXISTS {TEST_DB}")
         conn.commit()
+    initialize(conn_args, TEST_DB)  # the real init path: creates the database, tables and upgrades
 
     for key, value in {"HOST": conn_args["host"], "PORT": str(conn_args["port"]),
                        "USER": conn_args["user"], "PASSWORD": conn_args["password"],
@@ -151,3 +147,41 @@ def test_end_to_end_through_flask_with_real_database(real_store, monkeypatch):
 
     assert client.delete(f"/api/chat/session/{sid}").status_code == 200
     assert real_store.get_session_messages(sid) == []
+
+
+class TestManagedHostSetup:
+    """A managed MySQL host gives you ONE pre-created database and a user that can't create others."""
+
+    DB, USER, PW = "connect_managed_test", "managed_user", "managed-pw-1"
+
+    @pytest.fixture()
+    def admin(self):
+        args = {"host": os.environ["MYSQL_TEST_HOST"], "port": int(os.getenv("MYSQL_TEST_PORT", "3306")),
+                "user": os.getenv("MYSQL_TEST_USER", "root"), "password": os.getenv("MYSQL_TEST_PASSWORD", "")}
+        with mysql.connector.connect(**args) as conn:
+            cur = conn.cursor()
+            cur.execute(f"DROP DATABASE IF EXISTS {self.DB}")
+            cur.execute(f"DROP USER IF EXISTS '{self.USER}'@'%'")
+            cur.execute(f"CREATE DATABASE {self.DB}")
+            cur.execute(f"CREATE USER '{self.USER}'@'%' IDENTIFIED BY '{self.PW}'")
+            cur.execute(f"GRANT ALL PRIVILEGES ON {self.DB}.* TO '{self.USER}'@'%'")
+            conn.commit()
+            yield args
+            cur.execute(f"DROP DATABASE IF EXISTS {self.DB}")
+            cur.execute(f"DROP USER IF EXISTS '{self.USER}'@'%'")
+            conn.commit()
+
+    def limited(self, admin):
+        return {"host": admin["host"], "port": admin["port"], "user": self.USER, "password": self.PW}
+
+    def test_initialises_a_preexisting_database_without_create_privilege(self, admin):
+        initialize(self.limited(admin), self.DB)
+        initialize(self.limited(admin), self.DB)  # and again: idempotent
+        with mysql.connector.connect(**admin) as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = %s", (self.DB,))
+            assert cur.fetchone()[0] == 6
+
+    def test_unusable_database_gives_a_clear_error(self, admin):
+        with pytest.raises(RuntimeError, match="not usable"):
+            initialize(self.limited(admin), "connect_does_not_exist_test")

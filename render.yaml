@@ -22,6 +22,10 @@ services:
         sync: false
       - key: MYSQL_DATABASE
         value: connect_mvp
+      - key: MYSQL_SSL_CA          # optional: path to the provider's CA certificate committed in the repo
+        sync: false
+      - key: MYSQL_SSL_VERIFY      # set to 1 together with MYSQL_SSL_CA for verified TLS
+        sync: false
       - key: GROQ_API_KEY
         sync: false
       - key: LIMITER_STORAGE_URI  # redis://... so rate limits are shared across workers

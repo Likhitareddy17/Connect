@@ -18,6 +18,44 @@ ALLOWED_GOALS = {"grounding", "clarity", "energy", "gratitude"}
 ALLOWED_RELIGIONS = {"hindu", "islam", "christianity", "sikh", "atheist"}
 
 
+def _env_flag(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def ssl_options() -> dict:
+    """TLS settings for managed MySQL hosts, most of which require encrypted connections.
+
+    By default the driver negotiates TLS when the server offers it (encrypted, but the server
+    certificate is not verified). For verified TLS set MYSQL_SSL_CA to the provider's CA
+    certificate file and MYSQL_SSL_VERIFY=1.
+    """
+    options: dict = {}
+    ca = os.getenv("MYSQL_SSL_CA")
+    if ca:
+        options["ssl_ca"] = ca
+    if _env_flag("MYSQL_SSL_VERIFY"):
+        if not ca:
+            raise ValueError("MYSQL_SSL_VERIFY=1 needs MYSQL_SSL_CA (path to the CA certificate)")
+        options["ssl_verify_cert"] = True
+    if _env_flag("MYSQL_SSL_DISABLED"):
+        options["ssl_disabled"] = True
+    return options
+
+
+def connection_config(database: str | None = None) -> dict:
+    """Connection settings from the environment; pass ``database=None`` to connect without one."""
+    config = {
+        "host": os.getenv("MYSQL_HOST", "localhost"),
+        "port": int(os.getenv("MYSQL_PORT", "3306")),
+        "user": os.getenv("MYSQL_USER", "root"),
+        "password": os.getenv("MYSQL_PASSWORD", ""),
+        **ssl_options(),
+    }
+    if database:
+        config["database"] = database
+    return config
+
+
 class ConnectStore:
     def __init__(self):
         self._pool = None
@@ -25,17 +63,10 @@ class ConnectStore:
     def _get_pool(self):
         """Lazy-initialise the connection pool on first use, not at import time."""
         if self._pool is None:
-            config = {
-                "host": os.getenv("MYSQL_HOST", "localhost"),
-                "port": int(os.getenv("MYSQL_PORT", "3306")),
-                "user": os.getenv("MYSQL_USER", "root"),
-                "password": os.getenv("MYSQL_PASSWORD", ""),
-                "database": os.getenv("MYSQL_DATABASE", "connect_mvp"),
-            }
             self._pool = MySQLConnectionPool(
                 pool_name="connect_pool",
                 pool_size=int(os.getenv("MYSQL_POOL_SIZE", "5")),
-                **config,
+                **connection_config(os.getenv("MYSQL_DATABASE", "connect_mvp")),
             )
         return self._pool
 
