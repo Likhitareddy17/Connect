@@ -21,10 +21,15 @@ class TestRegistration:
         data.update(overrides)
         return client.post("/register", data=data)
 
-    def test_success_logs_in_and_redirects_home(self, client, fake_store):
+    def test_success_creates_unverified_account_and_does_not_log_in(self, client, fake_store, outbox):
         res = self.post(client)
-        assert res.status_code == 302 and res.headers["Location"].endswith("/")
-        assert fake_store.get_user_by_email("new@example.com")["religion"] == "hindu"
+        assert res.status_code == 200 and b"Check your email" in res.data
+        user = fake_store.get_user_by_email("new@example.com")
+        assert user["religion"] == "hindu" and user["email_verified"] is False
+        assert len(outbox) == 1 and outbox[0]["To"] == "new@example.com"
+        with client.session_transaction() as sess:
+            assert "_user_id" not in sess
+        assert client.get("/").status_code == 302  # still signed out
 
     @pytest.mark.parametrize("email", ["", "no-at-sign", "a@b", "two@@example.com", "sp ace@example.com"])
     def test_bad_email_rejected(self, client, email):

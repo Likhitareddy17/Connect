@@ -8,7 +8,6 @@ import hashlib
 import logging
 import os
 import secrets
-from datetime import datetime, timedelta, timezone
 from contextlib import contextmanager
 
 import bcrypt
@@ -19,6 +18,16 @@ logger = logging.getLogger(__name__)
 
 ALLOWED_GOALS = {"grounding", "clarity", "energy", "gratitude"}
 ALLOWED_RELIGIONS = {"hindu", "islam", "christianity", "sikh", "atheist"}
+
+# Single-use e-mail tokens. Table names are interpolated into SQL, so they come ONLY from this fixed map.
+_TOKEN_TABLES = {"verify": "email_verification_tokens", "reset": "password_reset_tokens"}
+MAX_TOKEN_HOURS = 168  # a week: the longest any e-mailed link may live
+MAX_TOKEN_LENGTH = 200  # real tokens are 43 characters; refuse absurd input before hashing it
+
+
+def hash_token(token: str) -> str:
+    """SHA-256 hex digest. Only this is stored; the raw token exists in the e-mailed link alone."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 def _env_flag(name: str) -> bool:
@@ -86,6 +95,8 @@ class ConnectStore:
             conn.close()
 
     # ── Auth ────────────────────────────────────────────────────────────────
+
+
     def create_user(
         self,
         email: str,
@@ -136,86 +147,96 @@ class ConnectStore:
 
     def verify_password(self, user: dict, password: str) -> bool:
         return bcrypt.checkpw(password.encode(), user["password_hash"].encode())
-    def create_email_verification_token(
-        self, user_id: int, expires_hours: int = 24
-    ) -> str:
-        if expires_hours <= 0:
-            raise ValueError("Token expiry must be positive")
 
+    # ── E-mail verification / password reset tokens ─────────────────────────
+    #
+    # Tokens are 256-bit random values; only their SHA-256 is stored. Expiry is computed by MySQL
+    # (UTC_TIMESTAMP) so the app server's clock never matters. A token is *claimed* with one atomic
+    # UPDATE ... WHERE used_at IS NULL AND expires_at > now: two concurrent requests cannot both win,
+    # because the second UPDATE blocks on the row lock and then matches zero rows.
+
+    def _issue_token(self, kind: str, user_id: int, hours: int) -> str:
+        table = _TOKEN_TABLES[kind]
+        if isinstance(hours, bool) or not isinstance(hours, int) or not 1 <= hours <= MAX_TOKEN_HOURS:
+            raise ValueError(f"expires_hours must be a whole number between 1 and {MAX_TOKEN_HOURS}")
         token = secrets.token_urlsafe(32)
-        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
-
-        expires_at = (
-            datetime.now(timezone.utc).replace(tzinfo=None)
-            + timedelta(hours=expires_hours)
-        )
-
         with self.connection() as conn:
             cursor = conn.cursor()
-
-            # Invalidate previous unused verification tokens.
+            # Only the newest link works: retire any earlier unused ones.
             cursor.execute(
-                """UPDATE email_verification_tokens
-                   SET used_at = UTC_TIMESTAMP()
-                   WHERE user_id = %s AND used_at IS NULL""",
+                f"UPDATE {table} SET used_at = UTC_TIMESTAMP() WHERE user_id = %s AND used_at IS NULL",
                 (user_id,),
             )
-
             cursor.execute(
-                """INSERT INTO email_verification_tokens
-                   (user_id, token_hash, expires_at)
-                   VALUES (%s, %s, %s)""",
-                (user_id, token_hash, expires_at),
+                f"""INSERT INTO {table} (user_id, token_hash, expires_at)
+                    VALUES (%s, %s, DATE_ADD(UTC_TIMESTAMP(), INTERVAL %s HOUR))""",
+                (user_id, hash_token(token), hours),
             )
-
         return token
 
+    @staticmethod
+    def _claim_token(cursor, kind: str, token: str) -> int | None:
+        """Atomically spend a valid token inside the caller's transaction; returns its user_id or None."""
+        if not token or len(token) > MAX_TOKEN_LENGTH:
+            return None
+        table = _TOKEN_TABLES[kind]
+        digest = hash_token(token)
+        cursor.execute(
+            f"""UPDATE {table} SET used_at = UTC_TIMESTAMP()
+                WHERE token_hash = %s AND used_at IS NULL AND expires_at > UTC_TIMESTAMP()""",
+            (digest,),
+        )
+        if cursor.rowcount != 1:
+            return None
+        cursor.execute(f"SELECT user_id FROM {table} WHERE token_hash = %s", (digest,))
+        row = cursor.fetchone()
+        return row["user_id"] if row else None
+
+    def create_email_verification_token(self, user_id: int, expires_hours: int = 24) -> str:
+        return self._issue_token("verify", user_id, expires_hours)
+
     def verify_email_token(self, token: str) -> bool:
-        """Verify an unexpired, single-use email verification token."""
-
-        if not isinstance(token, str) or not token:
-            return False
-
-        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
-
+        """Spend a valid verification token and mark its user verified, in one transaction."""
         with self.connection() as conn:
             cursor = conn.cursor(dictionary=True)
-
-            cursor.execute(
-                """SELECT id, user_id
-                   FROM email_verification_tokens
-                   WHERE token_hash = %s
-                     AND used_at IS NULL
-                     AND expires_at > UTC_TIMESTAMP()
-                   FOR UPDATE""",
-                (token_hash,),
-            )
-
-            record = cursor.fetchone()
-
-            if not record:
+            user_id = self._claim_token(cursor, "verify", token)
+            if user_id is None:
                 return False
+            cursor.execute("UPDATE users SET email_verified = TRUE WHERE id = %s", (user_id,))
+            return True
 
-            cursor.execute(
-                """UPDATE email_verification_tokens
-                   SET used_at = UTC_TIMESTAMP()
-                   WHERE id = %s
-                     AND used_at IS NULL
-                     AND expires_at > UTC_TIMESTAMP()""",
-                (record["id"],),
-            )
+    def create_password_reset_token(self, user_id: int, expires_hours: int = 1) -> str:
+        return self._issue_token("reset", user_id, expires_hours)
 
-            if cursor.rowcount != 1:
+    def reset_password_with_token(self, token: str, new_password: str) -> bool:
+        """Spend a valid reset token and set the new password.
+
+        Receiving the token proves control of the mailbox, so the address is also marked verified.
+        Changing password_hash signs out every existing session (see app.User.get_id).
+        """
+        pw_hash = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()  # slow: before the lock
+        with self.connection() as conn:
+            cursor = conn.cursor(dictionary=True)
+            user_id = self._claim_token(cursor, "reset", token)
+            if user_id is None:
                 return False
-
             cursor.execute(
-                """UPDATE users
-                   SET email_verified = TRUE
-                   WHERE id = %s""",
-                (record["user_id"],),
+                "UPDATE users SET password_hash = %s, email_verified = TRUE WHERE id = %s",
+                (pw_hash, user_id),
             )
+            # Any other outstanding reset links for this user are now void.
+            cursor.execute(
+                "UPDATE password_reset_tokens SET used_at = UTC_TIMESTAMP() WHERE user_id = %s AND used_at IS NULL",
+                (user_id,),
+            )
+            return True
 
-        return True
+    def delete_user(self, user_id: int) -> bool:
+        """Delete the account. Every owned row goes via ON DELETE CASCADE (see schema.sql)."""
+        with self.connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+            return cursor.rowcount > 0
 
     # ── Profile ─────────────────────────────────────────────────────────────
 

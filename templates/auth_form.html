@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{# One page for every form in the account flows: resend, forgot password, reset password, delete account. #}
+{% block title %}CONNECT · {{ title }}{% endblock %}
+
+{% block content %}
+  <section class="hero auth-hero">
+    <p class="eyebrow">CONNECT</p>
+    <h1>{{ heading or (title ~ '.') }}</h1>
+    <p class="soft-text">{{ intro }}</p>
+  </section>
+
+  <form method="post" class="card auth-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% for name, value in (hidden or {}).items() %}
+    <input type="hidden" name="{{ name }}" value="{{ value }}">
+    {% endfor %}
+    {% if notice %}<p class="soft-text" role="status">{{ notice }}</p>{% endif %}
+    {% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+    {% for f in fields %}
+    <label class="field-label" for="{{ f.name }}">{{ f.label }}</label>
+    <input id="{{ f.name }}" type="{{ f.type or 'text' }}" name="{{ f.name }}" autocomplete="{{ f.autocomplete or 'off' }}" required{% if f.placeholder %} placeholder="{{ f.placeholder }}"{% endif %}>
+    {% endfor %}
+    <button class="primary-btn" type="submit">{{ button }}</button>
+    {% for url, label in (links or []) %}
+    <p class="auth-switch"><a href="{{ url }}">{{ label }}</a></p>
+    {% endfor %}
+  </form>
+{% endblock %}

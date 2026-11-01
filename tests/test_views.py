@@ -1,6 +1,8 @@
 """Page-level tests: every module renders for every religion."""
 import pytest
 
+from tests.conftest import sign_in
+
 SPIRITUAL_CARD_TEXT = {
     "hindu": "Today's deity, mantra, vrat",
     "islam": "Prayer times, Hijri date",
@@ -15,9 +17,7 @@ def client_for(client, fake_store):
     """Sign in a fresh user that follows the given religion."""
     def make(religion):
         user = fake_store.create_user(f"{religion}@example.com", religion.title(), "password123", religion=religion)
-        with client.session_transaction() as sess:
-            sess["_user_id"] = str(user["id"])
-            sess["_fresh"] = True
+        sign_in(client, fake_store, user)
         return client
     return make
 
