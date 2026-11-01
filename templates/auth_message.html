@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{# One page for every "message + optional single action" screen in the account flows. #}
+{% block title %}CONNECT · {{ title }}{% endblock %}
+
+{% block content %}
+  <section class="hero auth-hero">
+    <p class="eyebrow">CONNECT</p>
+    <h1>{{ heading or (title ~ '.') }}</h1>
+    <p class="soft-text">{{ message }}</p>
+  </section>
+
+  {% if post_url %}
+  <form method="post" action="{{ post_url }}" class="card auth-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% for name, value in (hidden or {}).items() %}
+    <input type="hidden" name="{{ name }}" value="{{ value }}">
+    {% endfor %}
+    {% if note %}<p class="soft-text">{{ note }}</p>{% endif %}
+    <button class="primary-btn" type="submit">{{ button }}</button>
+    {% if link_url %}<p class="auth-switch"><a href="{{ link_url }}">{{ link_label }}</a></p>{% endif %}
+  </form>
+  {% elif link_url %}
+  <a class="primary-btn inline-link" href="{{ link_url }}">{{ link_label }}</a>
+  {% endif %}
+{% endblock %}

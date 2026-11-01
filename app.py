@@ -7,6 +7,8 @@ safety screen).
 """
 from __future__ import annotations
 
+import hashlib
+import hmac
 import logging
 import os
 import re
@@ -29,6 +31,7 @@ from flask_login import (
 from flask_wtf.csrf import CSRFError, CSRFProtect
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+from services import email_sender
 from services.grounding import ALLOWED_MOODS, recommend_practices
 from services.journal_analysis import FALLBACK_MOOD, HISTORY_WINDOW, SOURCE_FALLBACK, generate_chat_response
 from services.religion_providers import RELIGION_LABELS, get_provider
@@ -99,6 +102,23 @@ MAX_JOURNAL_LENGTH = 2000
 MAX_DISPLAY_NAME_LENGTH = 120
 MAX_PASSWORD_BYTES = 72  # bcrypt only uses the first 72 bytes; reject rather than silently truncate
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+VERIFY_TOKEN_HOURS = 24
+RESET_TOKEN_HOURS = 1
+DELETE_CONFIRM_WORD = "DELETE"
+GENERIC_RESEND_NOTICE = (
+    "If an account with that email needs verifying, we've sent a new link. "
+    "Check your inbox (and spam folder)."
+)
+GENERIC_RESET_NOTICE = (
+    "If an account with that email exists, we've sent a link to reset its password. "
+    "Check your inbox (and spam folder)."
+)
+
+
+def _password_fingerprint(password_hash: str) -> str:
+    key = app.config["SECRET_KEY"]
+    key = key.encode() if isinstance(key, str) else key
+    return hmac.new(key, password_hash.encode(), hashlib.sha256).hexdigest()[:32]
 
 
 class User(UserMixin):
@@ -106,7 +126,12 @@ class User(UserMixin):
         self._data = data
 
     def get_id(self) -> str:
-        return str(self._data["id"])
+        """``<id>:<fingerprint of the current password hash>``.
+
+        The fingerprint is baked into the session and "remember me" cookies, so changing the password
+        (e.g. via reset) makes every previously issued cookie fail in ``load_user``.
+        """
+        return f"{self._data['id']}:{_password_fingerprint(self._data['password_hash'])}"
 
     @property
     def id(self) -> int:
@@ -130,19 +155,29 @@ class User(UserMixin):
 
 
 @login_manager.user_loader
-def load_user(user_id: str) -> User | None:
-    data = store.get_user_by_id(int(user_id))
-    return User(data) if data else None
+def load_user(session_id: str) -> User | None:
+    uid, _, fingerprint = str(session_id).partition(":")
+    if not uid.isdigit() or not fingerprint:
+        return None  # malformed or pre-upgrade cookie: sign in again
+    data = store.get_user_by_id(int(uid))
+    if not data or not hmac.compare_digest(fingerprint, _password_fingerprint(data["password_hash"])):
+        return None  # unknown user, or the password changed since this cookie was issued
+    return User(data)
 
 
 @app.after_request
 def add_security_headers(response):
+    if request.endpoint in NO_STORE_ENDPOINTS:
+        response.headers["Cache-Control"] = "no-store"  # pages that carry one-time tokens
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "same-origin")
     if app.config["SESSION_COOKIE_SECURE"]:
         response.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
     return response
+
+
+NO_STORE_ENDPOINTS = {"verify_email", "reset_password"}
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────
@@ -208,6 +243,96 @@ def readyz():
 
 # ── Auth Routes ────────────────────────────────────────────────────────────
 
+# ── Shared pages for the account flows (templates: auth_message.html, auth_form.html) ──
+
+EMAIL_FIELD = {"name": "email", "label": "Email", "type": "email", "autocomplete": "email",
+               "placeholder": "you@example.com"}
+NEW_PASSWORD_FIELDS = [
+    {"name": "password", "label": "New password", "type": "password", "autocomplete": "new-password",
+     "placeholder": "At least 8 characters"},
+    {"name": "confirm_password", "label": "Confirm new password", "type": "password",
+     "autocomplete": "new-password", "placeholder": "••••••••"},
+]
+
+
+def auth_message(title: str, message: str, status: int = 200, **context):
+    return render_template("auth_message.html", title=title, message=message, **context), status
+
+
+def auth_form(title: str, intro: str, fields: list, button: str, status: int = 200, **context):
+    return render_template("auth_form.html", title=title, intro=intro, fields=fields, button=button,
+                           **context), status
+
+
+def _check_email_page(email: str, sent: bool):
+    message = (
+        f"We sent a confirmation link to {email}. It works for {VERIFY_TOKEN_HOURS} hours. "
+        "Open it to finish creating your account, then sign in."
+        if sent else
+        f"Your account was created, but we couldn’t send the confirmation email to {email} just now. "
+        "Use the button below to try again in a moment."
+    )
+    return auth_message(
+        "Check your email", message, post_url=url_for("resend_verification"), hidden={"email": email},
+        button="Send the link again", note="Didn’t get it? Check your spam folder, or",
+        link_url=url_for("login"), link_label="Back to sign in",
+    )
+
+
+def _password_error(password: str, confirm: str) -> str | None:
+    if len(password) < 8:
+        return "Password must be at least 8 characters."
+    if len(password.encode()) > MAX_PASSWORD_BYTES:
+        return "Password must be at most 72 bytes (about 72 characters)."
+    if password != confirm:
+        return "Passwords do not match."
+    return None
+
+
+def _email_link(endpoint: str, token: str) -> str:
+    """Absolute link for an e-mail. Refuses a malformed base URL, and plain http outside debug mode."""
+    base = email_sender.public_base_url(request.url_root)
+    parsed = urlparse(base)
+    if (parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.username or parsed.password
+            or parsed.query or parsed.fragment):
+        logger.error("PUBLIC_BASE_URL is invalid; e-mail not sent.")
+        raise email_sender.EmailDeliveryError("invalid base URL")
+    if not DEBUG and parsed.scheme != "https":
+        logger.error("E-mailed links must use HTTPS outside debug mode (check PUBLIC_BASE_URL); e-mail not sent.")
+        raise email_sender.EmailDeliveryError("insecure base URL")
+    return f"{base}{url_for(endpoint, token=token)}"
+
+
+def _send_verification(user_id: int, email: str) -> bool:
+    """Issue a fresh verification link and mail it. Never raises; False means it wasn't delivered."""
+    try:
+        token = store.create_email_verification_token(user_id, expires_hours=VERIFY_TOKEN_HOURS)
+        email_sender.send_verification_email(email, _email_link("verify_email", token), VERIFY_TOKEN_HOURS)
+        return True
+    except email_sender.EmailDeliveryError:
+        return False  # already logged without the token or SMTP details
+    except Exception:  # noqa: BLE001 - e.g. database error: don't turn it into a 500 / leak details
+        logger.exception("Could not create or send a verification e-mail for user %s", user_id)
+        return False
+
+
+def _send_password_reset(user_id: int, email: str) -> bool:
+    try:
+        token = store.create_password_reset_token(user_id, expires_hours=RESET_TOKEN_HOURS)
+        email_sender.send_password_reset_email(email, _email_link("reset_password", token), RESET_TOKEN_HOURS)
+        return True
+    except email_sender.EmailDeliveryError:
+        return False
+    except Exception:  # noqa: BLE001
+        logger.exception("Could not create or send a password-reset e-mail for user %s", user_id)
+        return False
+
+
+def _email_rate_key() -> str:
+    """Rate-limit by the e-mail being targeted, so one inbox can't be flooded from many IPs."""
+    return "email:" + request.form.get("email", "").strip().lower()[:255]
+
+
 @app.route("/register", methods=["GET", "POST"])
 @limiter.limit("10 per hour", methods=["POST"])
 def register():
@@ -222,19 +347,16 @@ def register():
         religion = request.form.get("religion", "atheist")
         if len(email) > 255 or not EMAIL_RE.match(email):
             error = "A valid email is required."
-        elif len(password) < 8:
-            error = "Password must be at least 8 characters."
-        elif len(password.encode()) > MAX_PASSWORD_BYTES:
-            error = "Password must be at most 72 bytes (about 72 characters)."
-        elif password != confirm:
-            error = "Passwords do not match."
         else:
-            user_data = store.create_user(email, display_name, password, religion=religion)
+            error = _password_error(password, confirm)
+        if error is None:
+            user_data = store.create_user(email, display_name, password, religion=religion, email_verified=False)
             if user_data is None:
                 error = "An account with that email already exists."
             else:
-                login_user(User(user_data))
-                return redirect(url_for("home"))
+                # No login until the address is confirmed.
+                sent = _send_verification(user_data["id"], user_data["email"])
+                return _check_email_page(user_data["email"], sent)
     return render_template("register.html", error=error, religion_options=RELIGION_LABELS)
 
 
@@ -249,6 +371,13 @@ def login():
         password = request.form.get("password", "")
         user_data = store.get_user_by_email(email)
         if user_data and store.verify_password(user_data, password):
+            if not user_data.get("email_verified"):
+                # Only reached with the correct password, so this reveals nothing to a stranger.
+                return render_template(
+                    "login.html",
+                    error="Please confirm your email address before signing in.",
+                    unverified_email=user_data["email"],
+                ), 403
             login_user(User(user_data), remember=True)
             next_page = request.args.get("next")
             return redirect(next_page if is_safe_redirect(next_page) else url_for("home"))
@@ -256,13 +385,164 @@ def login():
     return render_template("login.html", error=error)
 
 
+def _sign_out() -> None:
+    """Clear the session AND the "remember me" cookie.
+
+    Order matters: logout_user() leaves a marker in the session that tells Flask-Login to delete the
+    remember cookie. Calling session.clear() *after* it erases that marker, and the next request would
+    silently sign the person back in.
+    """
+    session.clear()
+    logout_user()
+
+
 @app.post("/logout")
 @login_required
 def logout():
     """POST-only (and CSRF-protected) so a third-party page can't log users out via <img src=...>."""
-    logout_user()
-    session.clear()
+    _sign_out()
     return redirect(url_for("login"))
+
+
+# ── E-mail verification ────────────────────────────────────────────────────
+# The e-mailed link (GET) only *shows* a confirm button; the token is spent by the POST. Mail scanners
+# and link previews fetch GET links automatically and would otherwise burn the single-use token.
+
+@app.get("/verify-email")
+def verify_email():
+    token = request.args.get("token", "")
+    if not token:
+        return _verify_failed()
+    return auth_message(
+        "Confirm your email", "One last step to finish creating your account.",
+        post_url=url_for("verify_email_confirm"), hidden={"token": token}, button="Confirm my email",
+    )
+
+
+def _verify_failed():
+    return auth_message(
+        "That link didn’t work", "It may have expired or already been used. You can request a new one.",
+        status=400, link_url=url_for("resend_verification"), link_label="Send a new link",
+    )
+
+
+@app.post("/verify-email")
+@limiter.limit("20 per hour")
+def verify_email_confirm():
+    if not store.verify_email_token(request.form.get("token", "")):
+        return _verify_failed()
+    return auth_message("Email confirmed", "Thank you. Your account is ready.",
+                        link_url=url_for("login"), link_label="Sign in")
+
+
+@app.route("/resend-verification", methods=["GET", "POST"])
+@limiter.limit("5 per hour", methods=["POST"])
+@limiter.limit("3 per hour", methods=["POST"], key_func=_email_rate_key)
+def resend_verification():
+    notice = None
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()[:255]
+        user_data = store.get_user_by_email(email) if EMAIL_RE.match(email) else None
+        if user_data and not user_data.get("email_verified"):
+            _send_verification(user_data["id"], user_data["email"])
+        # Identical answer whether or not the account exists, is verified, or the mail went out.
+        notice = GENERIC_RESEND_NOTICE
+    return auth_form(
+        "Resend confirmation", "Enter the email you signed up with and we’ll send a fresh link.",
+        [EMAIL_FIELD], "Send link", notice=notice, links=[(url_for("login"), "Back to sign in")],
+    )
+
+
+# ── Password reset ─────────────────────────────────────────────────────────
+
+@app.route("/forgot-password", methods=["GET", "POST"])
+@limiter.limit("5 per hour", methods=["POST"])
+@limiter.limit("3 per hour", methods=["POST"], key_func=_email_rate_key)
+def forgot_password():
+    notice = None
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()[:255]
+        user_data = store.get_user_by_email(email) if EMAIL_RE.match(email) else None
+        if user_data:
+            _send_password_reset(user_data["id"], user_data["email"])
+        notice = GENERIC_RESET_NOTICE
+    return auth_form(
+        "Forgot your password", "Enter your email and we’ll send a link to choose a new one.",
+        [EMAIL_FIELD], "Send reset link", notice=notice, heading="Forgot your password?",
+        links=[(url_for("login"), "Back to sign in")],
+    )
+
+
+def _reset_form(token: str, error: str | None = None, status: int = 200):
+    return auth_form(
+        "Choose a new password", "You’ll be signed out everywhere and asked to sign in with the new one.",
+        NEW_PASSWORD_FIELDS, "Update password", status=status, hidden={"token": token}, error=error,
+    )
+
+
+def _reset_link_invalid():
+    return auth_message(
+        "That link didn’t work", "This reset link is invalid or has expired. Please request a new one.",
+        status=400, link_url=url_for("forgot_password"), link_label="Request a new link",
+    )
+
+
+@app.get("/reset-password")
+def reset_password():
+    token = request.args.get("token", "")
+    return _reset_form(token) if token else _reset_link_invalid()
+
+
+@app.post("/reset-password")
+@limiter.limit("10 per hour")
+def reset_password_confirm():
+    token = request.form.get("token", "")
+    error = _password_error(request.form.get("password", ""), request.form.get("confirm_password", ""))
+    if error:
+        return _reset_form(token, error, status=400)  # the token survives a typo
+    if not store.reset_password_with_token(token, request.form.get("password", "")):
+        return _reset_link_invalid()
+    # No automatic login: the person signs in with the new password (all old sessions are now void).
+    return render_template("login.html", error=None, notice="Your password has been updated. Please sign in."), 200
+
+
+# ── Account deletion ───────────────────────────────────────────────────────
+
+def _delete_form(error: str | None = None, status: int = 200):
+    return auth_form(
+        "Delete your account",
+        "This permanently deletes your account and everything in it: mood check-ins, chat conversations, "
+        "reflection cards, journal entries and jaap counts. It cannot be undone.",
+        [
+            {"name": "password", "label": "Your password", "type": "password", "autocomplete": "current-password"},
+            {"name": "confirm_text", "label": f"Type {DELETE_CONFIRM_WORD} to confirm"},
+        ],
+        "Permanently delete my account", status=status, error=error,
+        links=[(url_for("dashboard"), "No, keep my account")],
+    )
+
+
+@app.get("/account/delete")
+@login_required
+def delete_account():
+    return _delete_form()
+
+
+@app.post("/account/delete")
+@login_required
+@limiter.limit("5 per hour")
+def delete_account_confirm():
+    user_data = store.get_user_by_id(current_user.id)  # fresh read: never trust cached session data
+    typed = request.form.get("confirm_text", "").strip()
+    if not user_data or not store.verify_password(user_data, request.form.get("password", "")):
+        return _delete_form("That password is not correct.", status=400)
+    if typed != DELETE_CONFIRM_WORD:
+        return _delete_form(f"Type {DELETE_CONFIRM_WORD} in capitals to confirm.", status=400)
+
+    # Only ever the signed-in user's own id; the id is never taken from the request.
+    store.delete_user(current_user.id)
+    _sign_out()
+    return render_template("login.html", error=None, notice="Your account and all its data have been deleted."), 200
 
 
 # ── Main Module Views ──────────────────────────────────────────────────────

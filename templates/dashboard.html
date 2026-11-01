@@ -50,7 +50,7 @@
           <option value="{{ key }}" {% if current_user.religion == key %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
-
+      <p class="soft-text"><a href="{{ url_for('delete_account') }}">Delete my account</a></p>
       <button class="primary-btn" type="submit">Save</button>
     </form>
   </section>
@@ -60,7 +60,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
 const raw = {{ history | tojson }};
-
 // Generate labels for the last 7 days
 const today = new Date();
 const labels = [];

@@ -7,9 +7,12 @@ scenarios against a real database to keep the two from drifting apart.
 from __future__ import annotations
 
 import itertools
-from datetime import datetime
+import secrets
+from datetime import datetime, timedelta, timezone
 
 import bcrypt
+
+from store import MAX_TOKEN_HOURS, MAX_TOKEN_LENGTH, hash_token
 
 ALLOWED_RELIGIONS = {"hindu", "islam", "christianity", "sikh", "atheist"}
 
@@ -22,9 +25,11 @@ class FakeStore:
         self.messages: dict[str, list[dict]] = {}  # session_id -> [{role, content}]
         self.moods: list[tuple[int, str]] = []
         self.journals: list[dict] = []
+        # kind ("verify" / "reset") -> {token_hash: {"user_id", "expires_at", "used"}}
+        self.tokens: dict[str, dict[str, dict]] = {"verify": {}, "reset": {}}
 
     # users
-    def create_user(self, email, display_name, password, religion="atheist"):
+    def create_user(self, email, display_name, password, religion="atheist", email_verified=True):
         email = email.lower().strip()
         if any(u["email"] == email for u in self.users.values()):
             return None
@@ -34,6 +39,7 @@ class FakeStore:
             "password_hash": bcrypt.hashpw(password.encode(), bcrypt.gensalt(4)).decode(),
             "daily_goal": "grounding",
             "religion": religion if religion in ALLOWED_RELIGIONS else "atheist",
+            "email_verified": bool(email_verified),
         }
         self.users[uid] = user
         return {k: v for k, v in user.items() if k != "password_hash"}
@@ -46,6 +52,68 @@ class FakeStore:
 
     def verify_password(self, user, password):
         return bcrypt.checkpw(password.encode(), user["password_hash"].encode())
+
+    # e-mail tokens (same contract as ConnectStore: hashed at rest, single use, expiring, newest wins)
+    def _issue(self, kind, user_id, hours):
+        if isinstance(hours, bool) or not isinstance(hours, int) or not 1 <= hours <= MAX_TOKEN_HOURS:
+            raise ValueError("expires_hours out of range")
+        token = secrets.token_urlsafe(32)
+        for rec in self.tokens[kind].values():
+            if rec["user_id"] == user_id:
+                rec["used"] = True
+        self.tokens[kind][hash_token(token)] = {
+            "user_id": user_id, "used": False,
+            "expires_at": datetime.now(timezone.utc) + timedelta(hours=hours),
+        }
+        return token
+
+    def _claim(self, kind, token):
+        if not token or len(token) > MAX_TOKEN_LENGTH:
+            return None
+        rec = self.tokens[kind].get(hash_token(token))
+        if not rec or rec["used"] or rec["expires_at"] <= datetime.now(timezone.utc):
+            return None
+        rec["used"] = True
+        return rec["user_id"]
+
+    def create_email_verification_token(self, user_id, expires_hours=24):
+        return self._issue("verify", user_id, expires_hours)
+
+    def verify_email_token(self, token):
+        user_id = self._claim("verify", token)
+        if user_id is None:
+            return False
+        self.users[user_id]["email_verified"] = True
+        return True
+
+    def create_password_reset_token(self, user_id, expires_hours=1):
+        return self._issue("reset", user_id, expires_hours)
+
+    def reset_password_with_token(self, token, new_password):
+        user_id = self._claim("reset", token)
+        if user_id is None:
+            return False
+        self.users[user_id]["password_hash"] = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt(4)).decode()
+        self.users[user_id]["email_verified"] = True
+        for rec in self.tokens["reset"].values():
+            if rec["user_id"] == user_id:
+                rec["used"] = True
+        return True
+
+    def delete_user(self, user_id):
+        """Mirrors ON DELETE CASCADE: everything the user owns goes with them."""
+        if user_id not in self.users:
+            return False
+        del self.users[user_id]
+        for sid in [sid for sid, s in self.sessions.items() if s["user_id"] == user_id]:
+            del self.sessions[sid]
+            self.messages.pop(sid, None)
+        self.journals = [j for j in self.journals if j["user_id"] != user_id]
+        self.moods = [(uid, m) for uid, m in self.moods if uid != user_id]
+        for records in self.tokens.values():
+            for digest in [d for d, rec in records.items() if rec["user_id"] == user_id]:
+                del records[digest]
+        return True
 
     def update_goal(self, user_id, goal):
         self.users[user_id]["daily_goal"] = goal

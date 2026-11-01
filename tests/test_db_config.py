@@ -101,5 +101,5 @@ class TestSchemaFile:
 
     def test_schema_creates_every_table_idempotently(self):
         statements = split_sql(self.SCHEMA.read_text(encoding="utf-8"))
-        assert len(statements) == 6
+        assert len(statements) == 8
         assert all(st.upper().startswith("CREATE TABLE IF NOT EXISTS") for st in statements)

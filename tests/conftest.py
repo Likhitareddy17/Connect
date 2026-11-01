@@ -1,4 +1,6 @@
 """Shared pytest fixtures and configuration."""
+from __future__ import annotations
+
 import os
 import sys
 
@@ -15,10 +17,69 @@ os.environ["GROQ_API_KEY"] = ""
 os.environ["SAFETY_CLASSIFIER_ENABLED"] = "0"
 os.environ["PROKERALA_CLIENT_ID"] = ""
 os.environ["PROKERALA_CLIENT_SECRET"] = ""
+# E-mail: fixed, fake settings so a developer's real .env can never leak into tests. Nothing is ever sent:
+# the autouse `outbox` fixture below replaces smtplib.SMTP / SMTP_SSL.
+os.environ.update({
+    "SMTP_HOST": "smtp.test.invalid", "SMTP_PORT": "587", "SMTP_USERNAME": "smtp-user",
+    "SMTP_PASSWORD": "smtp-pass", "SMTP_FROM_EMAIL": "noreply@connect.test",
+    "PUBLIC_BASE_URL": "https://connect.test",
+})
 
 import pytest  # noqa: E402
 
 from tests.fakes import FakeStore  # noqa: E402
+
+
+class FakeSMTP:
+    """Stands in for smtplib.SMTP / SMTP_SSL: records messages instead of sending them."""
+
+    outbox: list = []          # EmailMessage objects "sent" in this test
+    log: list = []             # ("starttls"|"login"|"connect", ...) events, to assert TLS ordering
+    fail_with: Exception | None = None
+
+    def __init__(self, host="", port=0, timeout=None, **kwargs):
+        FakeSMTP.log.append(("connect", type(self).__name__, host, port))
+        if FakeSMTP.fail_with is not None:
+            raise FakeSMTP.fail_with
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def starttls(self, **kwargs):
+        FakeSMTP.log.append(("starttls",))
+
+    def login(self, user, password):
+        FakeSMTP.log.append(("login", user))
+
+    def send_message(self, message):
+        FakeSMTP.outbox.append(message)
+
+
+class FakeSMTPSSL(FakeSMTP):
+    pass
+
+
+@pytest.fixture(autouse=True)
+def outbox(monkeypatch):
+    """No test can reach a real mail server. Returns the list of messages 'sent'."""
+    import smtplib
+
+    FakeSMTP.outbox, FakeSMTP.log, FakeSMTP.fail_with = [], [], None
+    monkeypatch.setattr(smtplib, "SMTP", FakeSMTP)
+    monkeypatch.setattr(smtplib, "SMTP_SSL", FakeSMTPSSL)
+    return FakeSMTP.outbox
+
+
+def sign_in(client, store, user):
+    """Put a signed-in session on ``client`` for ``user`` (a dict from store.create_user)."""
+    import app as app_module
+
+    with client.session_transaction() as sess:
+        sess["_user_id"] = app_module.User(store.get_user_by_id(user["id"])).get_id()
+        sess["_fresh"] = True
 
 
 @pytest.fixture()
@@ -59,9 +120,7 @@ def csrf_client(fake_store):
 def logged_in(client, fake_store):
     """Client signed in as a fresh user; returns (client, user_dict)."""
     user = fake_store.create_user("me@example.com", "Me", "password123")
-    with client.session_transaction() as sess:
-        sess["_user_id"] = str(user["id"])
-        sess["_fresh"] = True
+    sign_in(client, fake_store, user)
     return client, user
 
 
