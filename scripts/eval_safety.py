@@ -12,7 +12,7 @@ import os
 import sys
 import time
 from pathlib import Path
-
+from dotenv import load_dotenv
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
@@ -24,7 +24,7 @@ def main():
     parser.add_argument("--model", action="store_true", help="also run the model classifier (needs GROQ_API_KEY)")
     parser.add_argument("--verbose", action="store_true", help="list every miss / false alarm")
     args = parser.parse_args()
-
+    load_dotenv(ROOT / ".env")
     key = os.getenv("GROQ_API_KEY")
     if args.model and not key:
         sys.exit("--model needs GROQ_API_KEY in the environment")
@@ -38,7 +38,7 @@ def main():
 
     def level(text):
         if args.model:
-            time.sleep(0.2)  # be polite to the rate limit
+            time.sleep(2.5)  # be polite to the rate limit
             return assess_message([{"role": "user", "content": text}], key).level
         return "crisis" if regex_category(text) else "none"
 
