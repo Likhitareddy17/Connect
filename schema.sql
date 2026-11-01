@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(255) NOT NULL UNIQUE,
   display_name VARCHAR(120) NOT NULL DEFAULT 'Friend',
   password_hash VARCHAR(255) NOT NULL,
+  email_verified BOOLEAN NOT NULL DEFAULT FALSE,
   daily_goal VARCHAR(40) NOT NULL DEFAULT 'grounding',
   religion VARCHAR(20) NOT NULL DEFAULT 'atheist',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -65,4 +66,15 @@ CREATE TABLE IF NOT EXISTS jaap_sessions (
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY unique_daily_jaap (user_id, practice_date, mantra),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS email_verification_tokens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    token_hash CHAR(64) NOT NULL UNIQUE,
+    expires_at DATETIME NOT NULL,
+    used_at DATETIME NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_email_verification_user (user_id)
 );

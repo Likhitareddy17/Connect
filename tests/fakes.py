@@ -1,4 +1,6 @@
-"""In-memory stand-in for ConnectStore, so route tests need no database.
+
+"""
+In-memory stand-in for ConnectStore, so route tests need no database.
 
 Behaviour that matters (latest-N history, ownership, cascade delete) mirrors
 the real MySQL implementation; tests/test_store_integration.py runs the same
@@ -6,8 +8,10 @@ scenarios against a real database to keep the two from drifting apart.
 """
 from __future__ import annotations
 
+import hashlib
 import itertools
-from datetime import datetime
+import secrets
+from datetime import datetime, timedelta, timezone
 
 import bcrypt
 
@@ -22,19 +26,35 @@ class FakeStore:
         self.messages: dict[str, list[dict]] = {}  # session_id -> [{role, content}]
         self.moods: list[tuple[int, str]] = []
         self.journals: list[dict] = []
+        self.email_verification_tokens: dict[str, dict] = {}
 
     # users
-    def create_user(self, email, display_name, password, religion="atheist"):
+    def create_user(
+        self,
+        email,
+        display_name,
+        password,
+        religion="atheist",
+        email_verified=True,
+    ):
         email = email.lower().strip()
         if any(u["email"] == email for u in self.users.values()):
             return None
+
         uid = next(self._ids)
+
         user = {
-            "id": uid, "email": email, "display_name": display_name.strip() or "Friend",
-            "password_hash": bcrypt.hashpw(password.encode(), bcrypt.gensalt(4)).decode(),
+            "id": uid,
+            "email": email,
+            "display_name": display_name.strip()[:120] or "Friend",
+            "password_hash": bcrypt.hashpw(
+                password.encode(), bcrypt.gensalt(4)
+            ).decode(),
             "daily_goal": "grounding",
             "religion": religion if religion in ALLOWED_RELIGIONS else "atheist",
+            "email_verified": bool(email_verified),
         }
+
         self.users[uid] = user
         return {k: v for k, v in user.items() if k != "password_hash"}
 
@@ -46,6 +66,58 @@ class FakeStore:
 
     def verify_password(self, user, password):
         return bcrypt.checkpw(password.encode(), user["password_hash"].encode())
+
+    def create_email_verification_token(self, user_id, expires_hours=24):
+        if expires_hours <= 0:
+            raise ValueError("Token expiry must be positive")
+
+        if user_id not in self.users:
+            raise ValueError("User does not exist")
+
+        token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+        expires_at = datetime.now(timezone.utc) + timedelta(hours=expires_hours)
+
+        # Invalidate previous unused tokens for this user.
+        for record in self.email_verification_tokens.values():
+            if record["user_id"] == user_id and record["used_at"] is None:
+                record["used_at"] = datetime.now(timezone.utc)
+
+        self.email_verification_tokens[token_hash] = {
+            "user_id": user_id,
+            "expires_at": expires_at,
+            "used_at": None,
+        }
+
+        return token
+
+    def verify_email_token(self, token):
+        """Verify an unexpired, single-use email verification token."""
+
+        if not isinstance(token, str) or not token:
+            return False
+
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+        record = self.email_verification_tokens.get(token_hash)
+
+        if not record:
+            return False
+
+        now = datetime.now(timezone.utc)
+
+        if record["used_at"] is not None or record["expires_at"] <= now:
+            return False
+
+        user = self.users.get(record["user_id"])
+
+        if not user:
+            return False
+
+        record["used_at"] = now
+        user["email_verified"] = True
+
+        return True
 
     def update_goal(self, user_id, goal):
         self.users[user_id]["daily_goal"] = goal

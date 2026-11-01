@@ -29,6 +29,7 @@ UPGRADES = [
     ("users", "religion", "VARCHAR(20) NOT NULL DEFAULT 'atheist'"),
     ("chat_sessions", "summary", "TEXT NULL"),
     ("journal_entries", "session_id", "VARCHAR(36) NULL"),
+    ("users", "email_verified", "BOOLEAN NOT NULL DEFAULT TRUE"),
 ]
 
 _DB_NAME_RE = re.compile(r"^[A-Za-z0-9_$]{1,64}$")

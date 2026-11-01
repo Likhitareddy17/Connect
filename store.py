@@ -4,8 +4,11 @@ All writes use parameterised queries. Connection pooling via mysql-connector.
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
+import secrets
+from datetime import datetime, timedelta, timezone
 from contextlib import contextmanager
 
 import bcrypt
@@ -83,27 +86,41 @@ class ConnectStore:
             conn.close()
 
     # ── Auth ────────────────────────────────────────────────────────────────
-
-    def create_user(self, email: str, display_name: str, password: str, religion: str = "atheist") -> dict | None:
-        """Hash password and insert a new user. Returns user dict or None on duplicate email."""
+    def create_user(
+        self,
+        email: str,
+        display_name: str,
+        password: str,
+        religion: str = "atheist",
+        email_verified: bool = True,
+    ) -> dict | None:
         email = email.lower().strip()
         display_name = display_name.strip()[:120] or "Friend"
         pw_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
         safe_religion = religion if religion in ALLOWED_RELIGIONS else "atheist"
+
         try:
             with self.connection() as conn:
                 cursor = conn.cursor(dictionary=True)
                 cursor.execute(
-                    """INSERT INTO users (email, display_name, password_hash, daily_goal, religion)
-                       VALUES (%s, %s, %s, 'grounding', %s)""",
-                    (email, display_name, pw_hash, safe_religion),
+                    """INSERT INTO users
+                       (email, display_name, password_hash, daily_goal, religion, email_verified)
+                       VALUES (%s, %s, %s, 'grounding', %s, %s)""",
+                    (email, display_name, pw_hash, safe_religion, bool(email_verified)),
                 )
+
                 return {
-                    "id": cursor.lastrowid, "email": email, "display_name": display_name,
-                    "daily_goal": "grounding", "religion": safe_religion,
+                    "id": cursor.lastrowid,
+                    "email": email,
+                    "display_name": display_name,
+                    "daily_goal": "grounding",
+                    "religion": safe_religion,
+                    "email_verified": bool(email_verified),
                 }
+
         except mysql.connector.IntegrityError:
             return None
+
 
     def get_user_by_email(self, email: str) -> dict | None:
         with self.connection() as conn:
@@ -119,6 +136,86 @@ class ConnectStore:
 
     def verify_password(self, user: dict, password: str) -> bool:
         return bcrypt.checkpw(password.encode(), user["password_hash"].encode())
+    def create_email_verification_token(
+        self, user_id: int, expires_hours: int = 24
+    ) -> str:
+        if expires_hours <= 0:
+            raise ValueError("Token expiry must be positive")
+
+        token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+        expires_at = (
+            datetime.now(timezone.utc).replace(tzinfo=None)
+            + timedelta(hours=expires_hours)
+        )
+
+        with self.connection() as conn:
+            cursor = conn.cursor()
+
+            # Invalidate previous unused verification tokens.
+            cursor.execute(
+                """UPDATE email_verification_tokens
+                   SET used_at = UTC_TIMESTAMP()
+                   WHERE user_id = %s AND used_at IS NULL""",
+                (user_id,),
+            )
+
+            cursor.execute(
+                """INSERT INTO email_verification_tokens
+                   (user_id, token_hash, expires_at)
+                   VALUES (%s, %s, %s)""",
+                (user_id, token_hash, expires_at),
+            )
+
+        return token
+
+    def verify_email_token(self, token: str) -> bool:
+        """Verify an unexpired, single-use email verification token."""
+
+        if not isinstance(token, str) or not token:
+            return False
+
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+        with self.connection() as conn:
+            cursor = conn.cursor(dictionary=True)
+
+            cursor.execute(
+                """SELECT id, user_id
+                   FROM email_verification_tokens
+                   WHERE token_hash = %s
+                     AND used_at IS NULL
+                     AND expires_at > UTC_TIMESTAMP()
+                   FOR UPDATE""",
+                (token_hash,),
+            )
+
+            record = cursor.fetchone()
+
+            if not record:
+                return False
+
+            cursor.execute(
+                """UPDATE email_verification_tokens
+                   SET used_at = UTC_TIMESTAMP()
+                   WHERE id = %s
+                     AND used_at IS NULL
+                     AND expires_at > UTC_TIMESTAMP()""",
+                (record["id"],),
+            )
+
+            if cursor.rowcount != 1:
+                return False
+
+            cursor.execute(
+                """UPDATE users
+                   SET email_verified = TRUE
+                   WHERE id = %s""",
+                (record["user_id"],),
+            )
+
+        return True
 
     # ── Profile ─────────────────────────────────────────────────────────────
 
