@@ -80,7 +80,7 @@ _SELF_HARM_PATTERNS = [
     r"\b(better|easier)\s+(off\s+)?without\s+me\b",
     r"\b(end|ending)\s+it\s+all\b",
     r"\bcan'?t\s+(go\s+on|do\s+this\s+anymore|take\s+it\s+anymore)\b",
-       
+
 ]
 
 _ABUSE_PATTERNS = [
@@ -281,7 +281,7 @@ def _classify(history: list[dict[str, str]], api_key: str) -> SafetyAssessment:
         },
         timeout=CLASSIFIER_TIMEOUT_SECONDS,
     )
-    
+
     if response.status_code == 429:
         logger.warning("Groq rate limit reached (HTTP 429).")
 
