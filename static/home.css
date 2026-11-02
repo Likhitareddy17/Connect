@@ -992,3 +992,101 @@
     transition: none;
   }
 }
+
+
+/* Open editorial layout: remove dashboard panels and let the landscape breathe. */
+.home-page .daily-guidance,
+.home-page .reflection-section,
+.home-page .grounding-section {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transition: none;
+}
+
+.home-page .daily-guidance {
+  padding: 0 2% 8px;
+  border-bottom: 0;
+}
+
+.home-page .reflection-section {
+  width: min(100%, 920px);
+  padding: 18px 12px;
+  border-bottom: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.home-page .grounding-section {
+  padding: 6px 2% 4px;
+  border-bottom: 0;
+}
+
+.home-page .daily-guidance:hover,
+.home-page .reflection-section:hover,
+.home-page .grounding-section:hover {
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.home-page .grounding-step {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.home-page .guidance-chip {
+  border: 1px solid rgba(111, 137, 77, .10);
+  background: rgba(235, 231, 202, .34);
+  box-shadow: none;
+}
+
+.home-page .guidance-chip:hover {
+  transform: translateY(-1px);
+  background: rgba(235, 231, 202, .58);
+  box-shadow: none;
+}
+
+.home-page .new-quote-button {
+  border: 0;
+  background: rgba(224, 228, 194, .62);
+  box-shadow: none;
+}
+
+.home-page .new-quote-button:hover {
+  transform: translateY(-1px);
+  background: rgba(213, 223, 170, .78);
+  box-shadow: none;
+}
+
+.home-page .new-quote-button:active {
+  transform: scale(.97);
+}
+
+@media (max-width: 640px) {
+  .home-page .daily-guidance,
+  .home-page .reflection-section,
+  .home-page .grounding-section {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .home-page .daily-guidance {
+    padding: 0 0 8px;
+  }
+
+  .home-page .reflection-section {
+    padding: 14px 0;
+  }
+
+  .home-page .grounding-section {
+    padding: 4px 0;
+  }
+}
