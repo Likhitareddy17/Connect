@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import requests
 import uuid
 from datetime import date
 from urllib.parse import urlparse
@@ -272,13 +273,81 @@ def logout():
 def home():
     mood = store.latest_mood(current_user.id) or "calm"
     practices = recommend_practices(mood=mood, goal=current_user.daily_goal, limit=3)
+    today = date.today()
+    daily = get_provider(current_user.religion).get_day(today)
+    quote_defaults = {
+        "islam": {"text": "Verily, in the remembrance of Allah do hearts find rest.", "source": "Qur’an 13:28 · English rendering"},
+        "hindu": {"text": "You have the right to work, but never to the fruit of work.", "source": "Bhagavad Gita 2:47 · English rendering"},
+        "christianity": {"text": "Do not be anxious about anything, but in everything, by prayer and supplication, present your requests to God.", "source": "Philippians 4:6 · World English Bible"},
+        "sikh": {"text": "Recognize the divine light within all, and do not consider social divisions.", "source": "Guru Granth Sahib · reflective paraphrase"},
+        "atheist": {"text": "Almost everything will work again if you unplug it for a few minutes, including you.", "source": "Anne Lamott · secular reflection"},
+    }
     return render_template(
         "home.html",
         profile=current_user,
         guidance=build_guidance(current_user),
         practices=practices,
         religion=current_user.religion,
+        calendar_date=today.strftime("%A, %d %B %Y"),
+        calendar_label=daily.get("calendar_label") or today.strftime("%A, %d %B %Y"),
+        quote=quote_defaults.get(current_user.religion, quote_defaults["atheist"]),
     )
+
+
+@app.post("/api/daily-quote")
+@login_required
+@limiter.limit("8 per minute")
+def api_daily_quote():
+    """Generate a short reflection aligned to the signed-in user's tradition and calendar."""
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        return jsonify({"error": "Quote generation is unavailable. Please try again later."}), 503
+
+    religion = current_user.religion
+    today = date.today()
+    daily = get_provider(religion).get_day(today)
+    traditions = {
+        "islam": "Islamic sources only: Qur'an or authenticated Hadith. Include the surah/ayah or collection/reference. The date context is the live Hijri date when available.",
+        "hindu": "Hindu sources only: Bhagavad Gita, Upanishads, or a clearly named Hindu scripture. Include chapter/verse. The date context is the Hindu panchang when available.",
+        "christianity": "Christian Bible only. Include book, chapter and verse. The date context is the Christian liturgical season/feast.",
+        "sikh": "Guru Granth Sahib only. Include an accurate Ang/line reference if known; otherwise label it clearly as a paraphrase, never invent a verse number.",
+        "atheist": "Secular, non-religious mindfulness or humanist writing only. Do not mention any deity or religious scripture; use the Gregorian date.",
+    }
+    prompt = (
+        "Create one brief, calming daily reflection for a wellness home page. "
+        "Return ONLY JSON with keys text and source. Keep text under 35 words. "
+        "Do not fabricate quotations, authors, scripture references or verse numbers. "
+        "If you cannot confidently provide a verbatim quotation and accurate source, "
+        "write an original reflection and label source as 'Original reflection'. "
+        f"User tradition: {religion}. Guidance/calendar context: {daily.get('calendar_label') or today.isoformat()}. "
+        f"Source rules: {traditions.get(religion, traditions['atheist'])}"
+    )
+    try:
+        response = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={
+                "model": os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.7,
+                "max_tokens": 130,
+                "response_format": {"type": "json_object"},
+            },
+            timeout=12,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        generated = payload["choices"][0]["message"]["content"]
+        import json
+        parsed = json.loads(generated)
+        text = str(parsed.get("text", "")).strip()
+        source = str(parsed.get("source", "")).strip()
+        if not text or len(text) > 500 or not source or len(source) > 160:
+            raise ValueError("Invalid quote response")
+        return jsonify({"text": text, "source": source, "calendar": daily.get("calendar_label") or today.isoformat()})
+    except Exception as exc:
+        logger.warning("Daily quote generation failed: %s", exc)
+        return jsonify({"error": "A new reflection could not be generated just now. Please try again."}), 503
 
 
 @app.route("/spiritual")
