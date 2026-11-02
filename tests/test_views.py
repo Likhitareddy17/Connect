@@ -1,13 +1,14 @@
 """Page-level tests: every module renders for every religion."""
 import pytest
 
-SPIRITUAL_CARD_TEXT = {
-    "hindu": "Today's deity, mantra, vrat",
-    "islam": "Prayer times, Hijri date",
-    "christianity": "Season, feasts, reflection",
-    "sikh": "Simran, Gurbani, Gurpurabs",
-    "atheist": "A quiet moment, today's observance",
-}
+RELIGIONS = ["hindu", "islam", "christianity", "sikh", "atheist"]
+OLD_CARD_TEXT = (
+    "Today's deity, mantra, vrat",
+    "Prayer times, Hijri date",
+    "Season, feasts, reflection",
+    "Simran, Gurbani, Gurpurabs",
+    "A quiet moment, today's observance",
+)
 
 
 @pytest.fixture()
@@ -22,24 +23,25 @@ def client_for(client, fake_store):
     return make
 
 
-@pytest.mark.parametrize("religion", SPIRITUAL_CARD_TEXT)
-def test_home_shows_religion_specific_spiritual_card(client_for, religion):
+@pytest.mark.parametrize("religion", RELIGIONS)
+def test_home_shows_unboxed_guidance_for_every_religion(client_for, religion):
     page = client_for(religion).get("/").get_data(as_text=True)
-    assert SPIRITUAL_CARD_TEXT[religion] in page
-    # none of the other religions' wording leaks in
-    for other, text in SPIRITUAL_CARD_TEXT.items():
-        if other != religion:
-            assert text not in page
+    assert "Today’s Guidance" in page
+    assert "Last check-in:" in page
+    assert "Try:" in page
+    assert "New Quote" in page
+    for old_text in OLD_CARD_TEXT:
+        assert old_text not in page
 
 
-@pytest.mark.parametrize("religion", SPIRITUAL_CARD_TEXT)
+@pytest.mark.parametrize("religion", RELIGIONS)
 def test_home_guidance_card_never_shows_placeholder_text(client_for, religion):
     page = client_for(religion).get("/").get_data(as_text=True)
     assert "Pending Panchang API" not in page
 
 
 @pytest.mark.parametrize("path", ["/", "/spiritual", "/mental", "/dashboard", "/emotional"])
-@pytest.mark.parametrize("religion", SPIRITUAL_CARD_TEXT)
+@pytest.mark.parametrize("religion", RELIGIONS)
 def test_every_page_renders_for_every_religion(client_for, religion, path):
     assert client_for(religion).get(path).status_code == 200
 
@@ -77,7 +79,7 @@ class TestChatPage:
 
 
 class TestNoDeveloperPlaceholdersInTheUi:
-    @pytest.mark.parametrize("religion", SPIRITUAL_CARD_TEXT)
+    @pytest.mark.parametrize("religion", RELIGIONS)
     def test_spiritual_day_api_has_no_placeholder_text(self, client_for, religion):
         body = client_for(religion).get("/api/spiritual/day?date=2026-10-17").get_data(as_text=True)
         for leftover in ("Pending Panchang", "Pending location", "Mock fallback", "connect Prokerala"):
@@ -90,11 +92,10 @@ class TestNoDeveloperPlaceholdersInTheUi:
         assert not {"tithi", "nakshatra", "yoga", "karana", "sunrise", "sunset"} & set(panchang)
         assert "weekday" in panchang["source_note"]
 
-    def test_home_chips_explain_themselves_and_header_shows_the_weekday(self, client_for):
+    def test_home_guidance_chips_explain_themselves(self, client_for):
         page = client_for("hindu").get("/").get_data(as_text=True)
+        assert "Today’s Guidance" in page
         assert "Last check-in:" in page and "Try:" in page
-        weekdays = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
-        assert any(f"<span>{day}</span>" in page for day in weekdays)  # weekday label in the card header
 
     def test_spiritual_page_script_is_valid_javascript(self, client_for, tmp_path):
         import re
@@ -122,10 +123,15 @@ class TestSpiritualPageLayout:
         css = (Path(__file__).resolve().parent.parent / "static" / "styles.css").read_text(encoding="utf-8")
         assert "@media (max-width: 860px)" in css and ".spiritual-layout { grid-template-columns: 1fr; }" in css
 
-    def test_bottom_nav_uses_full_names_with_short_ones_for_tiny_screens(self, client_for):
+    def test_single_top_nav_has_all_primary_links_and_no_bottom_nav(self, client_for):
         page = client_for("hindu").get("/").get_data(as_text=True)
-        for full, short in (("Spiritual", "Spirit"), ("Emotional", "Emotion")):
-            assert f'<span class="nav-full">{full}</span><span class="nav-short">{short}</span>' in page
+        assert page.count("<nav") == 1
+        assert 'class="topbar-nav"' in page
+        assert 'class="bottom-nav"' not in page
+        for label in ("Home", "Soul", "Mind", "Heart", "Sign Out"):
+            assert label in page
+        for href in ('href="/"', 'href="/spiritual"', 'href="/mental"', 'href="/emotional"'):
+            assert href in page
 
     def test_calendar_does_not_derive_today_from_the_utc_date(self, client_for):
         import re
