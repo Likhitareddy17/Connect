@@ -618,3 +618,86 @@
     flex-basis: 44px;
   }
 }
+
+
+/* Refined type scale and tighter space below the shared navigation. */
+.home-page .app-shell {
+  padding-top: 108px;
+}
+
+.home-page .home-hero {
+  padding-top: 0;
+}
+
+.home-page .home-eyebrow {
+  margin-bottom: 5px;
+  color: #667451;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .075em;
+}
+
+.home-page .home-hero h1 {
+  font-size: clamp(1.85rem, 3.1vw, 2.85rem);
+  font-weight: 600;
+  letter-spacing: -.028em;
+  line-height: 1.12;
+}
+
+.home-page .home-subtitle {
+  margin-top: 7px;
+  color: #777361;
+  font-size: clamp(13px, 1.1vw, 15px);
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+.home-page .guidance-label {
+  font-size: clamp(16px, 1.45vw, 19px);
+  font-weight: 600;
+}
+
+.home-page .guidance-label > span {
+  font-size: 19px;
+}
+
+.home-page .daily-guidance h2 {
+  margin-top: 9px;
+  margin-bottom: 8px;
+  font-size: clamp(1.35rem, 2.15vw, 1.75rem);
+  font-weight: 600;
+  letter-spacing: -.015em;
+}
+
+.home-page .calendar-label {
+  color: #777361;
+  font-size: 12px;
+}
+
+@media (max-height: 850px) and (min-width: 641px) {
+  .home-page .app-shell {
+    padding-top: 76px;
+  }
+}
+
+@media (max-width: 640px) {
+  .home-page .app-shell {
+    padding-top: 96px;
+  }
+
+  .home-page .home-eyebrow {
+    font-size: 10px;
+  }
+
+  .home-page .home-hero h1 {
+    font-size: clamp(1.75rem, 6.2vw, 2.35rem);
+  }
+
+  .home-page .home-subtitle {
+    font-size: 13px;
+  }
+
+  .home-page .daily-guidance h2 {
+    font-size: 1.4rem;
+  }
+}
