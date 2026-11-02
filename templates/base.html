@@ -8,50 +8,37 @@
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>{% block title %}CONNECT{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  {% if request.endpoint == "home" %}<link rel="stylesheet" href="{{ url_for('static', filename='home.css') }}">{% endif %}
 </head>
-<body>
+<body class="{% if request.endpoint == 'home' %}home-page{% endif %}">
   <a class="skip-link" href="#main">Skip to content</a>
   <div class="app-shell">
     <header class="topbar">
       <a class="brand" href="{{ url_for('home') }}" aria-label="CONNECT home">
-        <span class="brand-mark">om</span>
-        <span>
+        <span class="brand-mark" aria-hidden="true">♧</span>
+        <span class="brand-copy">
           <strong>CONNECT</strong>
           <small>spiritual · mental · emotional</small>
         </span>
       </a>
       {% if current_user.is_authenticated %}
-      <div class="topbar-right">
-        <a href="{{ url_for('dashboard') }}" class="topbar-link">Dashboard</a>
-        <form method="post" action="{{ url_for('settings') }}" class="goal-form">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <select name="daily_goal" onchange="this.form.submit()" aria-label="Daily goal" title="Your daily focus">
-            {% for goal in ['grounding','clarity','energy','gratitude'] %}
-              <option value="{{ goal }}" {% if current_user.daily_goal == goal %}selected{% endif %}>{{ goal }}</option>
-            {% endfor %}
-          </select>
-        </form>
-        <form method="post" action="{{ url_for('logout') }}" class="logout-form">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="topbar-link muted linklike">Sign out</button>
-        </form>
-      </div>
+      <nav class="topbar-nav" aria-label="Primary navigation">
+        <a href="{{ url_for('home') }}" class="{% if request.endpoint == 'home' %}active{% endif %}"><span aria-hidden="true">⌂</span> Home</a>
+        <a href="{{ url_for('spiritual') }}" class="{% if request.endpoint == 'spiritual' %}active{% endif %}"><span aria-hidden="true">✧</span> Soul</a>
+        <a href="{{ url_for('mental') }}" class="{% if request.endpoint == 'mental' %}active{% endif %}"><span aria-hidden="true">♧</span> Mind</a>
+        <a href="{{ url_for('emotional') }}" class="{% if request.endpoint == 'emotional' %}active{% endif %}"><span aria-hidden="true">♡</span> Heart</a>
+      </nav>
+      <form method="post" action="{{ url_for('logout') }}" class="logout-form header-logout">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="signout-button"><span aria-hidden="true">⇥</span> Sign Out</button>
+      </form>
       {% endif %}
-    </header>
-
-    <main id="main">
+    </header>    <main id="main">
       {% block content %}{% endblock %}
     </main>
   </div>
 
-  {% if current_user.is_authenticated %}
-  <nav class="bottom-nav" aria-label="Primary">
-    <a href="{{ url_for('home') }}" class="{% if request.endpoint == 'home' %}active{% endif %}">Home</a>
-    <a href="{{ url_for('spiritual') }}" class="{% if request.endpoint == 'spiritual' %}active{% endif %}"><span class="nav-full">Spiritual</span><span class="nav-short">Spirit</span></a>
-    <a href="{{ url_for('mental') }}" class="{% if request.endpoint == 'mental' %}active{% endif %}">Mental</a>
-    <a href="{{ url_for('emotional') }}" class="{% if request.endpoint == 'emotional' %}active{% endif %}"><span class="nav-full">Emotional</span><span class="nav-short">Emotion</span></a>
-  </nav>
-  {% endif %}
+
 
   <script>
     window.csrfHeaders = function (extra) {
