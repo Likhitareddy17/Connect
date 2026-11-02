@@ -562,3 +562,59 @@
     transition: none !important;
   }
 }
+
+
+/* Keep the complete desktop homepage visible on shorter screens. */
+@media (max-height: 850px) and (min-width: 641px) {
+  .home-page .app-shell {
+    padding-top: 88px;
+    padding-bottom: 10px;
+  }
+
+  .home-page main,
+  .home-page .home-content {
+    min-height: calc(100svh - 98px);
+  }
+
+  .home-page .home-content {
+    grid-template-rows: auto auto minmax(110px, 1fr) auto;
+    row-gap: 9px;
+  }
+
+  .home-page .home-hero {
+    padding-bottom: 0;
+  }
+
+  .home-page .home-subtitle {
+    margin-top: 6px;
+  }
+
+  .home-page .daily-guidance {
+    padding-bottom: 11px;
+  }
+
+  .home-page .daily-guidance h2 {
+    margin-top: 8px;
+    margin-bottom: 7px;
+  }
+
+  .home-page .reflection-section {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .home-page .grounding-section {
+    padding-top: 2px;
+    padding-bottom: 0;
+  }
+
+  .home-page .grounding-step {
+    min-height: 52px;
+  }
+
+  .home-page .grounding-icon {
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+  }
+}
