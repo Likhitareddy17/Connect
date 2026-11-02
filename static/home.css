@@ -1463,3 +1463,281 @@
     transition: none;
   }
 }
+
+
+/* Frosted-glass wellness dashboard: layered cards with a calm, centered rhythm. */
+.home-page .app-shell {
+  padding-left: clamp(18px, 5vw, 64px);
+  padding-right: clamp(18px, 5vw, 64px);
+}
+
+.home-page .home-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(190px, auto) auto;
+  align-items: stretch;
+  gap: clamp(16px, 2.2vh, 24px);
+  width: min(100%, 1120px);
+  max-width: 1120px;
+  min-height: auto;
+  margin: 0 auto;
+}
+
+.home-page .home-hero {
+  grid-column: 1;
+  grid-row: 1;
+  max-width: 720px;
+  padding: 0 8px;
+  margin: 0;
+}
+
+.home-page .daily-guidance,
+.home-page .reflection-section,
+.home-page .grounding-section {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  border: 1px solid rgba(111, 137, 77, .2);
+  border-radius: 16px;
+  background: rgba(255, 253, 246, .64);
+  box-shadow: 0 10px 30px rgba(55, 69, 36, .07), inset 0 1px 0 rgba(255,255,255,.55);
+  -webkit-backdrop-filter: blur(16px) saturate(115%);
+  backdrop-filter: blur(16px) saturate(115%);
+  transition: transform .22s ease, box-shadow .22s ease, background-color .22s ease, border-color .22s ease;
+}
+
+.home-page .daily-guidance:hover,
+.home-page .reflection-section:hover,
+.home-page .grounding-section:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 254, 249, .76);
+  border-color: rgba(111, 137, 77, .3);
+  box-shadow: 0 16px 38px rgba(55, 69, 36, .11), inset 0 1px 0 rgba(255,255,255,.72);
+}
+
+.home-page .daily-guidance {
+  grid-column: 1;
+  grid-row: 2;
+  padding: 20px 26px 21px;
+}
+
+.home-page .daily-guidance::before {
+  display: none;
+}
+
+.home-page .guidance-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px 20px;
+}
+
+.home-page .guidance-label {
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.home-page .calendar-label {
+  font-size: 12px;
+}
+
+.home-page .daily-guidance h2 {
+  margin: 12px 0 10px 30px;
+  font-size: clamp(1.25rem, 1.9vw, 1.55rem);
+  font-weight: 500;
+}
+
+.home-page .guidance-chips {
+  margin-left: 30px;
+}
+
+.home-page .reflection-section {
+  grid-column: 1;
+  grid-row: 3;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  justify-items: stretch;
+  gap: 12px;
+  width: 100%;
+  min-height: 190px;
+  padding: 28px clamp(20px, 4vw, 46px);
+  text-align: left;
+}
+
+.home-page .reflection-section::before {
+  display: none;
+}
+
+.home-page .quote-mark {
+  position: static;
+  align-self: start;
+  font-size: 68px;
+  line-height: .85;
+}
+
+.home-page .quote-copy {
+  width: min(100%, 720px);
+  justify-self: center;
+}
+
+.home-page .quote-copy blockquote {
+  font-size: clamp(1.35rem, 2.2vw, 1.8rem);
+  line-height: 1.42;
+}
+
+.home-page .quote-source {
+  margin-top: 9px;
+}
+
+.home-page .new-quote-button {
+  align-self: center;
+  justify-self: end;
+  margin: 0;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgba(111, 137, 77, .16);
+  background: rgba(224, 228, 194, .58);
+}
+
+.home-page .grounding-section {
+  grid-column: 1;
+  grid-row: 4;
+  display: grid;
+  grid-template-columns: minmax(190px, .42fr) minmax(0, 1fr);
+  align-items: center;
+  justify-content: stretch;
+  gap: 22px;
+  padding: 17px 26px;
+}
+
+.home-page .grounding-section::before {
+  display: none;
+}
+
+.home-page .grounding-section h2 {
+  font-size: 17px;
+  font-weight: 550;
+}
+
+.home-page .grounding-step {
+  min-height: 54px;
+  padding-left: 22px;
+  border-left: 1px solid rgba(111, 137, 77, .24);
+}
+
+.home-page .grounding-icon {
+  background: rgba(226, 231, 201, .58);
+}
+
+.home-page .guidance-chip {
+  border: 1px solid rgba(111, 137, 77, .13);
+  background: rgba(235, 231, 202, .42);
+  transition: transform .18s ease, background-color .18s ease, box-shadow .18s ease;
+}
+
+.home-page .guidance-chip:hover {
+  transform: translateY(-2px);
+  background: rgba(235, 231, 202, .7);
+  box-shadow: 0 5px 13px rgba(65, 76, 43, .08);
+}
+
+.home-page .new-quote-button,
+.home-page .topbar-nav a,
+.home-page .signout-button {
+  transition: transform .18s ease, background-color .18s ease, box-shadow .18s ease, color .18s ease;
+}
+
+.home-page .new-quote-button:hover {
+  transform: translateY(-2px);
+  background: rgba(213, 223, 170, .86);
+  box-shadow: 0 7px 16px rgba(65, 76, 43, .1);
+}
+
+.home-page .new-quote-button:active,
+.home-page .guidance-chip:active {
+  transform: scale(.98);
+}
+
+.home-page .topbar-nav a:hover,
+.home-page .signout-button:hover {
+  transform: translateY(-1px);
+}
+
+@media (max-width: 760px) {
+  .home-page .home-content {
+    gap: 15px;
+  }
+
+  .home-page .daily-guidance {
+    padding: 17px 18px;
+  }
+
+  .home-page .reflection-section {
+    grid-template-columns: 28px minmax(0, 1fr);
+    min-height: 0;
+    padding: 22px 18px;
+  }
+
+  .home-page .quote-mark {
+    font-size: 54px;
+  }
+
+  .home-page .new-quote-button {
+    grid-column: 2;
+    justify-self: start;
+    margin-top: 6px;
+  }
+
+  .home-page .grounding-section {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 16px 18px;
+  }
+
+  .home-page .grounding-step {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .home-page .daily-guidance {
+    padding: 15px;
+  }
+
+  .home-page .guidance-meta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .home-page .daily-guidance h2,
+  .home-page .guidance-chips {
+    margin-left: 0;
+  }
+
+  .home-page .reflection-section {
+    padding: 20px 14px;
+  }
+
+  .home-page .quote-copy blockquote {
+    font-size: 1.22rem;
+  }
+
+  .home-page .grounding-section {
+    padding: 14px 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-page .daily-guidance,
+  .home-page .reflection-section,
+  .home-page .grounding-section,
+  .home-page .guidance-chip,
+  .home-page .new-quote-button,
+  .home-page .topbar-nav a,
+  .home-page .signout-button {
+    transition: none;
+  }
+}
