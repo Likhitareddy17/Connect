@@ -784,3 +784,74 @@
     font-size: 1.25rem;
   }
 }
+
+
+/* Prevent the hero eyebrow from sitting beneath the fixed navigation. */
+.home-page .app-shell {
+  padding-top: 98px;
+}
+
+.home-page .home-content {
+  row-gap: clamp(14px, 2vh, 22px);
+}
+
+.home-page .home-hero {
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+.home-page .home-eyebrow {
+  margin-bottom: 6px;
+  font-size: 9px;
+  font-weight: 550;
+  color: #7b806c;
+}
+
+.home-page .home-hero h1 {
+  font-size: clamp(1.45rem, 2.35vw, 2.1rem);
+  line-height: 1.08;
+  font-weight: 500;
+}
+
+.home-page .home-subtitle {
+  margin-top: 6px;
+  color: #817d70;
+  font-size: clamp(12px, .95vw, 13px);
+  line-height: 1.5;
+}
+
+.home-page .daily-guidance h2 {
+  margin-top: 7px;
+  margin-bottom: 7px;
+  font-size: clamp(1.12rem, 1.65vw, 1.4rem);
+  line-height: 1.2;
+  font-weight: 500;
+}
+
+.home-page .daily-guidance {
+  padding-bottom: 16px;
+}
+
+@media (max-height: 850px) and (min-width: 641px) {
+  .home-page .app-shell {
+    padding-top: 88px;
+  }
+
+  .home-page .home-content {
+    row-gap: 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  .home-page .app-shell {
+    padding-top: 94px;
+  }
+
+  .home-page .home-hero h1 {
+    font-size: clamp(1.4rem, 5.8vw, 1.9rem);
+  }
+
+  .home-page .daily-guidance h2 {
+    font-size: 1.18rem;
+  }
+}
