@@ -1,8 +1,9 @@
+/* CONNECT home — immersive editorial scene */
 :root {
-  --home-ink: #282719;
-  --home-olive: #354b20;
-  --home-sage: #71864f;
-  --home-muted: #64624e;
+  --home-ink: #29291f;
+  --home-olive: #40572e;
+  --home-sage: #75845a;
+  --home-muted: #625e4d;
 }
 
 .home-page {
@@ -20,404 +21,332 @@
   max-width: none;
   min-height: 100svh;
   margin: 0;
-  padding: 108px clamp(20px, 6vw, 92px) 30px;
+  padding: 92px clamp(22px, 6vw, 96px) 26px;
 }
 
 .home-page main {
   position: relative;
   z-index: 1;
-  display: flex;
-  min-height: calc(100svh - 138px);
+  display: block;
+  min-height: calc(100svh - 118px);
 }
 
-/* The detailed sunrise artwork is the environment, not a panel behind the UI.
-   Add connect-sunrise.webp at static/images/ to use the exact CONNECT artwork.
-   The remote landscape remains as a graceful fallback until that file is added. */
+/* Artwork is a full-bleed environment. No synthetic CSS landscape layers. */
 .home-page .home-landscape {
   position: fixed;
   z-index: -2;
   inset: 0;
-  overflow: hidden;
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(255, 247, 230, .10), rgba(248, 241, 221, .06) 55%, rgba(231, 231, 207, .12)),
+    linear-gradient(180deg, rgba(255, 248, 232, .08), rgba(255, 248, 232, .02) 48%, rgba(42, 53, 29, .06)),
     url("/static/images/connect-sunrise.webp") center center / cover no-repeat,
-    url("https://static.wixstatic.com/media/3eeaf3_0ce3288d4ed7473b96ac13dd25845e33~mv2.jpg/v1/crop/x_0%2Cy_140%2Cw_2995%2Ch_1353/fill/w_1600%2Ch_740%2Cal_c%2Cq_85%2Cusm_0.66_1.00_0.01%2Cenc_auto/_DSC0868WS.jpg") center 52% / cover no-repeat,
-    linear-gradient(180deg, #fbf1df 0%, #e8eadb 56%, #d4ddc5 100%);
+    linear-gradient(180deg, #f6e6c9 0%, #d8dfc8 58%, #b8c4a4 100%);
 }
-
 .home-page .home-landscape::before {
   content: "";
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(90deg, rgba(255, 249, 235, .20), rgba(255, 249, 235, .04) 44%, rgba(255, 249, 235, .02)),
-    linear-gradient(180deg, rgba(255, 249, 236, .10), transparent 32%, rgba(238, 235, 214, .12));
+  background: linear-gradient(90deg, rgba(255, 247, 226, .20), rgba(255, 247, 226, .04) 48%, transparent 78%);
 }
-
 .home-page .home-landscape::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 55% 40% at 50% 48%, rgba(255, 249, 235, .20), transparent 78%);
-  pointer-events: none;
+  background: linear-gradient(180deg, transparent 68%, rgba(24, 37, 20, .15) 100%);
 }
-
-/* Decorative CSS hills/sun are deliberately disabled: the landscape itself
-   supplies the natural depth, foliage, stone and lamp detail. */
-.home-page .home-landscape > * { display: none !important; }
-
-.home-page .home-content {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, .94fr) minmax(0, 1.06fr);
-  grid-template-rows: minmax(180px, .82fr) minmax(190px, 1fr) auto;
-  align-items: center;
-  column-gap: clamp(22px, 4vw, 58px);
-  row-gap: clamp(22px, 3.8vh, 42px);
-  width: min(100%, 1260px);
-  min-height: calc(100svh - 138px);
-  margin: 0 auto;
-}
-
-.home-page .home-hero,
-.home-page .daily-guidance,
-.home-page .reflection-section,
-.home-page .grounding-section {
-  position: relative;
-  z-index: 1;
-  min-width: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-}
-
-.home-page .home-hero {
-  grid-column: 1;
-  grid-row: 1;
-  align-self: stretch;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  max-width: none;
-  margin: 0;
-  padding: clamp(18px, 2.5vw, 30px) clamp(12px, 1.5vw, 20px);
-}
-
-.home-page .home-hero::before {
-  content: "";
-  position: absolute;
-  top: 18%;
-  right: calc(clamp(22px, 4vw, 58px) / -2);
-  bottom: 18%;
-  width: 1px;
-  background: linear-gradient(180deg, transparent, rgba(93, 111, 65, .42) 18%, rgba(93, 111, 65, .42) 82%, transparent);
-}
-
-.home-page .home-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0 0 12px;
-  color: #4f603d;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .15em;
-  text-shadow: 0 1px 8px rgba(255, 250, 235, .75);
-}
-
-.home-page .home-eyebrow::after {
-  content: "";
-  width: 40px;
-  height: 1px;
-  background: #82956a;
-}
-
-.home-page .home-hero h1 {
-  max-width: 560px;
-  margin: 0;
-  color: #24231c;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(2rem, 3.25vw, 3rem);
-  font-weight: 500;
-  letter-spacing: -.035em;
-  line-height: 1.08;
-  text-shadow: 0 2px 16px rgba(255, 250, 237, .72);
-}
-
-.home-page .home-subtitle {
-  max-width: 430px;
-  margin: 12px 0 0;
-  color: #5f5a48;
-  font-family: Georgia, serif;
-  font-size: clamp(13px, 1.1vw, 16px);
-  line-height: 1.55;
-  text-shadow: 0 1px 12px rgba(255, 250, 237, .9);
-}
-
-.home-page .home-hero::after {
-  content: "❧";
-  align-self: flex-start;
-  margin-top: 10px;
-  color: #526b39;
-  font-family: Georgia, serif;
-  font-size: 34px;
-  line-height: .8;
-  transform: rotate(-12deg);
-  text-shadow: 0 2px 10px rgba(255, 250, 237, .65);
-}
-
-.home-page .daily-guidance {
-  grid-column: 2;
-  grid-row: 1;
-  align-self: stretch;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  width: 100%;
-  margin: 0;
-  padding: clamp(18px, 2.2vw, 28px) clamp(12px, 1.5vw, 20px);
-  text-shadow: 0 1px 10px rgba(255, 250, 237, .72);
-}
-
-.home-page .guidance-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px 16px;
-}
-
-.home-page .guidance-label,
-.home-page .calendar-label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.home-page .guidance-label {
-  color: #24291d;
-  font-size: clamp(15px, 1.3vw, 18px);
-  font-weight: 700;
-}
-
-.home-page .guidance-label > span,
-.home-page .calendar-label > span:first-child {
-  color: #526b38;
-  font-size: 21px;
-}
-
-.home-page .calendar-label {
-  color: #5f5a48;
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.home-page .daily-guidance h2 {
-  margin: 14px 0 13px 30px;
-  color: #3d572d;
-  font-family: Georgia, serif;
-  font-size: clamp(1.35rem, 1.9vw, 1.8rem);
-  font-weight: 500;
-  line-height: 1.2;
-}
-
-.home-page .guidance-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 9px 18px;
-  margin-left: 30px;
-}
-
-.home-page .guidance-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: #514f3d;
-  font-size: 11px;
-  transition: color .2s ease, transform .2s ease;
-}
-
-.home-page .guidance-chip > span,
-.home-page .guidance-chip strong { color: #405a2d; }
-.home-page .guidance-chip:hover { transform: translateY(-1px); color: #354b20; }
-
-.home-page .reflection-section {
-  grid-column: 1 / -1;
-  grid-row: 2;
-  display: grid;
-  grid-template-columns: 54px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 18px;
-  width: min(100%, 1060px);
-  min-height: 180px;
-  margin: 0 auto;
-  padding: clamp(22px, 3vw, 38px) clamp(22px, 4vw, 54px);
-  text-align: center;
-}
-
-.home-page .reflection-section::after {
-  content: "";
-  position: absolute;
-  bottom: -22px;
-  left: 50%;
-  width: min(180px, 24%);
-  height: 1px;
-  transform: translateX(-50%);
-  background: linear-gradient(90deg, transparent, rgba(112, 125, 83, .5), transparent);
-}
-
-.home-page .quote-mark {
-  align-self: start;
-  color: #71894c;
-  font-family: Georgia, serif;
-  font-size: 78px;
-  font-weight: 700;
-  line-height: .8;
-  text-shadow: 0 2px 14px rgba(255, 250, 237, .72);
-}
-
-.home-page .quote-copy {
-  width: min(100%, 760px);
-  justify-self: center;
-}
-
-.home-page .quote-copy blockquote {
-  margin: 0;
-  color: #24231d;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(1.35rem, 2.3vw, 2rem);
-  font-style: italic;
-  line-height: 1.4;
-  letter-spacing: -.012em;
-  text-wrap: balance;
-  text-shadow: 0 2px 18px rgba(255, 250, 237, .82);
-}
-
-.home-page .quote-source {
-  margin: 12px 0 0;
-  color: #52683c;
-  font-family: Georgia, serif;
-  font-size: 14px;
-  font-style: italic;
-  text-shadow: 0 1px 12px rgba(255, 250, 237, .88);
-}
-
-.home-page .new-quote-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  align-self: center;
-  min-height: 40px;
-  padding: 4px 0 4px 12px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: #405a2d;
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
-  cursor: pointer;
-  box-shadow: none;
-  text-shadow: 0 1px 10px rgba(255, 250, 237, .85);
-  transition: color .2s ease, transform .2s ease;
-}
-
-.home-page .new-quote-button span:first-child { font-size: 17px; }
-.home-page .new-quote-button:hover { transform: translateY(-1px); color: #263d19; }
-.home-page .new-quote-button:active { transform: translateY(0); }
-.home-page .new-quote-button:disabled { opacity: .68; cursor: wait; }
-
-.home-page .grounding-section {
-  grid-column: 1 / -1;
-  grid-row: 3;
-  display: grid;
-  grid-template-columns: minmax(210px, .42fr) minmax(0, 1fr);
-  align-items: center;
-  gap: clamp(18px, 3vw, 34px);
-  width: min(100%, 1050px);
-  margin: 0 auto;
-  padding: 18px clamp(20px, 3vw, 34px);
-  text-shadow: 0 1px 12px rgba(255, 250, 237, .82);
-}
-
-.home-page .grounding-section h2 {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  margin: 0;
-  color: #354a29;
-  font-family: Georgia, serif;
-  font-size: clamp(16px, 1.45vw, 20px);
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.home-page .grounding-section h2 span { color: #4c6636; font-size: 27px; }
-
-.home-page .grounding-step {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  min-height: 58px;
-  padding-left: clamp(16px, 2.5vw, 30px);
-  border: 0;
-  border-left: 1px solid rgba(91, 115, 62, .42);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.home-page .grounding-icon {
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  flex: 0 0 48px;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: #405a2d;
-  font-size: 24px;
-  box-shadow: none;
-}
-
-.home-page .grounding-step h3 {
-  margin: 0;
-  color: #25271d;
-  font-family: Georgia, serif;
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.home-page .grounding-step p {
-  margin: 4px 0 0;
-  color: #5f5d4e;
-  font-size: 13px;
-  line-height: 1.45;
-}
-
 .home-page .topbar-nav a,
 .home-page .signout-button {
-  transition: transform .18s ease, background-color .18s ease, box-shadow .18s ease;
+  transition: transform .18s ease, background-color .18s ease;
 }
 .home-page .topbar-nav a:hover,
 .home-page .signout-button:hover { transform: translateY(-1px); }
+
+.home-page .home-scene {
+  position: relative;
+  display: grid;
+  grid-template-rows: minmax(270px, 43svh) minmax(190px, 26svh) minmax(120px, auto);
+  width: min(100%, 1370px);
+  min-height: calc(100svh - 118px);
+  margin: 0 auto;
+}
+
+.home-page .scene-opening {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(310px, .92fr);
+  align-items: center;
+  gap: clamp(30px, 7vw, 110px);
+  padding: 10px clamp(10px, 2.6vw, 42px) 0;
+}
+
+.home-page .opening-copy {
+  position: relative;
+  align-self: center;
+  max-width: 620px;
+  padding: 0 0 26px;
+}
+.home-page .home-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 18px;
+  color: #53653d;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .19em;
+  text-shadow: 0 1px 12px rgba(255, 247, 225, .9);
+}
+.home-page .home-eyebrow span {
+  display: inline-block;
+  width: 34px;
+  height: 1px;
+  background: #7b8c5c;
+}
+.home-page .home-hero h1 {
+  max-width: 650px;
+  margin: 0;
+  color: #29291f;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(3.1rem, 6.3vw, 6.2rem);
+  font-weight: 400;
+  letter-spacing: -.055em;
+  line-height: .98;
+  text-shadow: 0 2px 24px rgba(255, 248, 230, .72);
+}
+.home-page .home-hero h1 em {
+  color: #4b6137;
+  font-weight: 400;
+}
+.home-page .home-subtitle {
+  max-width: 450px;
+  margin: 23px 0 0 4px;
+  color: #5c5848;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(14px, 1.25vw, 17px);
+  line-height: 1.65;
+  text-shadow: 0 1px 16px rgba(255, 248, 230, .94);
+}
+
+/* Guidance belongs to the right-hand light in the landscape; it is not a card. */
+.home-page .daily-guidance {
+  position: relative;
+  align-self: center;
+  max-width: 490px;
+  margin: 24px 0 0;
+  padding: 10px 0 12px clamp(22px, 3vw, 42px);
+  border: 0;
+  border-left: 1px solid rgba(74, 91, 48, .42);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  text-shadow: 0 1px 14px rgba(255, 248, 230, .9);
+}
+.home-page .guidance-kicker {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin: 0 0 17px;
+  color: #52623d;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .15em;
+}
+.home-page .guidance-kicker > span { font-size: 17px; }
+.home-page .guidance-date {
+  margin-left: auto;
+  color: #655f4d;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+.home-page .daily-guidance h2 {
+  max-width: 430px;
+  margin: 0;
+  color: #394f2b;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.65rem, 2.55vw, 2.65rem);
+  font-weight: 400;
+  line-height: 1.14;
+}
+.home-page .guidance-details {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  margin-top: 21px;
+}
+.home-page .guidance-details p {
+  display: grid;
+  grid-template-columns: 22px auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  color: #68614e;
+  font-size: 11px;
+}
+.home-page .guidance-details strong {
+  color: #3e4f2e;
+  font-weight: 750;
+}
+.home-page .detail-symbol {
+  color: #617a45;
+  font-size: 15px;
+  text-align: center;
+}
+
+/* Quote is the quiet centre of the composition, not another content card. */
+.home-page .reflection-section {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 900px);
+  margin: 0 auto;
+  padding: 18px 30px 20px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  text-align: center;
+}
+.home-page .reflection-kicker {
+  margin: 0 0 7px;
+  color: #566741;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .2em;
+  text-shadow: 0 1px 12px rgba(255, 248, 230, .92);
+}
+.home-page .reflection-ornament {
+  height: 34px;
+  color: #718651;
+  font-family: Georgia, serif;
+  font-size: 62px;
+  line-height: .9;
+  text-shadow: 0 1px 14px rgba(255, 248, 230, .85);
+}
+.home-page .quote-copy { width: min(100%, 790px); }
+.home-page .quote-copy blockquote {
+  margin: 0;
+  color: #29291f;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.45rem, 2.65vw, 2.55rem);
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.28;
+  letter-spacing: -.02em;
+  text-wrap: balance;
+  text-shadow: 0 2px 20px rgba(255, 248, 230, .96);
+}
+.home-page .quote-source {
+  margin: 10px 0 0;
+  color: #536640;
+  font-family: Georgia, serif;
+  font-size: 13px;
+  font-style: italic;
+  text-shadow: 0 1px 14px rgba(255, 248, 230, .95);
+}
+.home-page .new-quote-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 5px 0;
+  border: 0;
+  border-bottom: 1px solid rgba(75, 97, 55, .48);
+  border-radius: 0;
+  background: transparent;
+  color: #40572e;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: none;
+  transition: color .2s ease, border-color .2s ease;
+  text-shadow: 0 1px 12px rgba(255, 248, 230, .95);
+}
+.home-page .new-quote-button:hover { color: #253d1c; border-color: #253d1c; }
+.home-page .new-quote-button:disabled { opacity: .65; cursor: wait; }
+
+/* Grounding instruction sits low in the scene, like a quiet invitation. */
+.home-page .grounding-section {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(220px, .7fr) minmax(0, 1.3fr);
+  align-items: center;
+  gap: clamp(18px, 4vw, 60px);
+  width: min(100%, 1080px);
+  margin: 0 auto;
+  padding: 16px clamp(10px, 2.6vw, 42px) 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  text-shadow: 0 1px 14px rgba(255, 248, 230, .92);
+}
+.home-page .grounding-heading {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+.home-page .grounding-flourish {
+  color: #536b3c;
+  font-family: Georgia, serif;
+  font-size: 34px;
+}
+.home-page .grounding-section h2 {
+  margin: 0;
+  color: #354a2b;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(17px, 1.7vw, 22px);
+  font-weight: 500;
+  line-height: 1.2;
+}
+.home-page .grounding-step {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 15px;
+  min-height: 66px;
+  padding: 8px 0 8px 24px;
+  border: 0;
+  border-left: 1px solid rgba(74, 91, 48, .45);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.home-page .grounding-number {
+  color: #5e7544;
+  font-family: Georgia, serif;
+  font-size: 17px;
+  font-style: italic;
+}
+.home-page .grounding-step h3 {
+  margin: 0;
+  color: #2e3925;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 16px;
+  font-weight: 600;
+}
+.home-page .grounding-step p {
+  margin: 4px 0 0;
+  color: #5d5a49;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.home-page .grounding-endmark {
+  color: #62794a;
+  font-size: 17px;
+}
+
 .home-page .topbar-nav a:focus-visible,
 .home-page .signout-button:focus-visible,
 .home-page .new-quote-button:focus-visible {
   outline: 2px solid #dce5bd;
-  outline-offset: 3px;
+  outline-offset: 4px;
 }
-
 .home-page .sr-only {
   position: absolute;
   width: 1px;
@@ -431,68 +360,57 @@
 }
 
 @media (max-width: 900px) {
-  .home-page .app-shell { padding: 104px 24px 28px; }
-  .home-page .home-content {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto minmax(170px, auto) auto;
-    gap: 24px;
-    min-height: auto;
+  .home-page .app-shell { padding: 100px 24px 24px; }
+  .home-page .home-scene {
+    grid-template-rows: auto auto auto;
+    min-height: calc(100svh - 124px);
+    gap: 26px;
   }
-  .home-page .home-hero,
-  .home-page .daily-guidance,
-  .home-page .reflection-section,
-  .home-page .grounding-section {
-    grid-column: 1;
-    width: 100%;
+  .home-page .scene-opening {
+    grid-template-columns: 1fr;
+    gap: 22px;
+    padding: 28px 12px 0;
   }
-  .home-page .home-hero { grid-row: 1; }
-  .home-page .daily-guidance { grid-row: 2; }
-  .home-page .reflection-section { grid-row: 3; }
-  .home-page .grounding-section { grid-row: 4; }
-  .home-page .home-hero::before { display: none; }
-  .home-page .reflection-section { min-height: 165px; }
-}
-
-@media (max-width: 640px) {
-  .home-page .app-shell { padding: 96px 14px 22px; }
-  .home-page .home-content { gap: 22px; }
-  .home-page .home-hero,
-  .home-page .daily-guidance { padding: 16px 4px; }
-  .home-page .home-hero h1 { font-size: clamp(1.8rem, 8vw, 2.4rem); }
-  .home-page .home-subtitle { font-size: 13px; }
-  .home-page .guidance-meta { align-items: flex-start; }
-  .home-page .calendar-label { font-size: 10px; }
-  .home-page .daily-guidance h2,
-  .home-page .guidance-chips { margin-left: 0; }
-  .home-page .daily-guidance h2 { font-size: 1.35rem; }
-  .home-page .guidance-chip { font-size: 10px; }
-  .home-page .reflection-section {
-    grid-template-columns: 27px minmax(0, 1fr);
-    gap: 8px;
-    min-height: 0;
-    padding: 18px 4px;
+  .home-page .opening-copy { padding-bottom: 0; }
+  .home-page .home-hero h1 { font-size: clamp(3rem, 8vw, 5rem); }
+  .home-page .daily-guidance {
+    max-width: 560px;
+    margin: 0 0 0 10px;
+    padding: 8px 0 8px 20px;
   }
-  .home-page .quote-mark { font-size: 52px; }
-  .home-page .quote-copy blockquote { font-size: clamp(1.2rem, 5.4vw, 1.55rem); }
-  .home-page .quote-source { font-size: 12px; }
-  .home-page .new-quote-button {
-    grid-column: 2;
-    justify-self: start;
-    margin-top: 7px;
-  }
+  .home-page .reflection-section { min-height: 190px; }
   .home-page .grounding-section {
     grid-template-columns: 1fr;
-    gap: 11px;
-    padding: 16px 4px;
+    gap: 12px;
+    padding: 12px;
   }
-  .home-page .grounding-section h2 { font-size: 16px; }
-  .home-page .grounding-step {
-    min-height: 50px;
-    padding: 10px 0 0;
-    border-left: 0;
-    border-top: 1px solid rgba(91, 115, 62, .28);
-  }
-  .home-page .grounding-icon { width: 42px; height: 42px; flex-basis: 42px; }
+  .home-page .grounding-step { margin-left: 4px; }
+}
+
+@media (max-width: 600px) {
+  .home-page .app-shell { padding: 88px 16px 24px; }
+  .home-page .home-scene { gap: 18px; }
+  .home-page .scene-opening { padding: 26px 5px 0; gap: 18px; }
+  .home-page .home-eyebrow { margin-bottom: 13px; font-size: 9px; }
+  .home-page .home-hero h1 { font-size: clamp(2.8rem, 13vw, 4.2rem); }
+  .home-page .home-subtitle { margin-top: 15px; font-size: 13px; }
+  .home-page .desktop-break { display: none; }
+  .home-page .daily-guidance { margin-left: 3px; padding-left: 15px; }
+  .home-page .guidance-kicker { gap: 7px; font-size: 8px; }
+  .home-page .guidance-date { font-size: 9px; }
+  .home-page .daily-guidance h2 { font-size: 1.65rem; }
+  .home-page .guidance-details { gap: 9px; margin-top: 14px; }
+  .home-page .guidance-details p { grid-template-columns: 18px auto minmax(0, 1fr); font-size: 10px; }
+  .home-page .reflection-section { padding: 14px 3px; min-height: 180px; }
+  .home-page .reflection-kicker { font-size: 8px; }
+  .home-page .quote-copy blockquote { font-size: clamp(1.3rem, 6.2vw, 1.8rem); }
+  .home-page .quote-source { font-size: 11px; }
+  .home-page .grounding-section { padding: 10px 4px; }
+  .home-page .grounding-heading { gap: 9px; }
+  .home-page .grounding-section h2 { font-size: 17px; }
+  .home-page .grounding-step { grid-template-columns: 25px minmax(0, 1fr) 15px; gap: 10px; padding-left: 14px; }
+  .home-page .grounding-step h3 { font-size: 14px; }
+  .home-page .grounding-step p { font-size: 11px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
