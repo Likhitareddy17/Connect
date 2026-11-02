@@ -1,7 +1,7 @@
 :root{--home-ink:#282719;--home-olive:#354b20;--home-sage:#9eaf76;--home-paper:#fbf7ee;--home-muted:#64624e}
 .home-page{min-height:100vh;overflow-x:hidden;background:linear-gradient(180deg,#fbf8f0 0%,#f8f4e9 66%,#f0f1df 100%);color:var(--home-ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
-.home-page .app-shell{width:100%;max-width:none;margin:0;padding:92px clamp(20px,7vw,112px) 90px;position:relative;isolation:isolate}
-.home-page main{position:relative;z-index:1;min-height:calc(100vh - 160px)}
+.home-page .app-shell{width:100%;max-width:none;margin:0;padding:78px clamp(18px,3vw,48px) 34px;position:relative;isolation:isolate}
+.home-page main{position:relative;z-index:1;min-height:calc(100svh - 92px)}
 .home-page .home-landscape{position:absolute;z-index:-1;inset:65px 0 -140px;overflow:hidden;pointer-events:none;background:radial-gradient(ellipse at 82% 20%,rgba(255,224,155,.34),transparent 20%),linear-gradient(180deg,rgba(255,255,255,.12) 0%,rgba(249,246,235,.12) 42%,rgba(250,248,239,.92) 100%)}
 .home-page .landscape-sun{position:absolute;top:8%;right:13%;width:clamp(95px,13vw,150px);aspect-ratio:1;border-radius:50%;background:linear-gradient(145deg,#ffe7a9,#f9d889);box-shadow:0 0 75px rgba(245,208,129,.24)}
 .home-page .mountain{position:absolute;left:-12%;width:124%;border-radius:50% 50% 0 0/22% 22% 0 0;filter:blur(12px)}
@@ -11,13 +11,13 @@
 .home-page .foliage{position:absolute;color:rgba(119,148,72,.42);font-family:Georgia,serif;font-size:clamp(76px,12vw,148px);line-height:1;transform:rotate(25deg);text-shadow:2px 6px 14px rgba(89,112,51,.06)}
 .home-page .foliage-left{top:5%;left:-52px;transform:rotate(20deg)}
 .home-page .foliage-right{right:-48px;bottom:5%;transform:rotate(200deg)}
-.home-page .home-content{position:relative;max-width:1120px;margin:0 auto}
-.home-page .home-hero{padding:4px 0 24px;margin-left:clamp(0px,3vw,30px)}
+.home-page .home-content{position:relative;width:100%;max-width:1440px;margin:0 auto}
+.home-page .home-hero{padding:2px 0 14px;margin-left:clamp(0px,2vw,22px)}
 .home-page .home-eyebrow{margin:0 0 7px;color:#405b2b;font-size:13px;font-weight:850;letter-spacing:.02em}
 .home-page .home-hero h1{margin:0;color:#282719;font-family:Georgia,"Times New Roman",serif;font-size:clamp(2.6rem,5.2vw,4.3rem);font-weight:700;letter-spacing:-.035em;line-height:1.08}
 .home-page .home-subtitle{margin:12px 0 0;color:#3f3b30;font-family:Georgia,serif;font-size:clamp(14px,1.4vw,17px)}
-.home-page .daily-guidance{padding:0;margin:2px 0 0 clamp(0px,3vw,30px)}
-.home-page .guidance-meta{display:flex;align-items:center;justify-content:space-between;gap:18px;max-width:900px}
+.home-page .daily-guidance{padding:0;margin:0 0 0 clamp(0px,2vw,22px)}
+.home-page .guidance-meta{display:flex;align-items:center;justify-content:space-between;gap:18px;max-width:1100px}
 .home-page .guidance-label,.home-page .calendar-label{display:flex;align-items:center;gap:12px;font-size:14px}
 .home-page .guidance-label{color:#141810}
 .home-page .guidance-label>span,.home-page .calendar-label>span:first-child{color:#385329;font-size:21px}
@@ -27,7 +27,7 @@
 .home-page .guidance-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border-radius:999px;background:rgba(235,231,202,.58);color:#454536;font-size:12px}
 .home-page .guidance-chip>span{color:#3c572a;font-size:17px}
 .home-page .guidance-chip strong{color:#405c2b}
-.home-page .reflection-section{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:10px;margin:36px 0 28px;padding:0;max-width:1000px}
+.home-page .reflection-section{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:10px;margin:22px 0 18px;padding:0;max-width:1240px}
 .home-page .quote-mark{align-self:start;color:#405d29;font-family:Georgia,serif;font-size:76px;font-weight:700;line-height:.9}
 .home-page .quote-copy blockquote{margin:0;color:#24231d;font-family:Georgia,"Times New Roman",serif;font-size:clamp(1.25rem,2.35vw,1.8rem);font-style:italic;line-height:1.42}
 .home-page .quote-source{margin:5px 0 0;color:#405d29;font-family:Georgia,serif;font-size:15px;font-style:italic}
@@ -35,7 +35,7 @@
 .home-page .new-quote-button span:first-child{font-size:17px}
 .home-page .new-quote-button:hover{background:#d5dfaa}
 .home-page .new-quote-button:disabled{opacity:.65;cursor:wait}
-.home-page .grounding-section{margin:0 0 30px 4px}
+.home-page .grounding-section{margin:0 0 8px 4px}
 .home-page .grounding-section h2{display:flex;align-items:center;gap:12px;margin:0 0 12px;color:#151914;font-size:17px;font-weight:800}
 .home-page .grounding-section h2 span{color:#486333;font-size:23px}
 .home-page .grounding-step{display:flex;align-items:center;gap:16px;margin-left:20px}
@@ -43,8 +43,8 @@
 .home-page .grounding-step h3{margin:0;color:#161812;font-size:15px}
 .home-page .grounding-step p{margin:2px 0 0;color:#2d2d26;font-size:14px}
 .home-page .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-@media(min-width:1200px){.home-page .home-content{padding-top:8px}.home-page .reflection-section{margin-top:40px;margin-bottom:32px}}
-@media(max-width:760px){.home-page .app-shell{padding:94px 22px 70px}.home-page .foliage{font-size:clamp(76px,15vw,118px)}.home-page .foliage-left{left:-46px}.home-page .foliage-right{right:-46px}.home-page .reflection-section{grid-template-columns:28px minmax(0,1fr);margin-top:28px}.home-page .quote-mark{font-size:60px}.home-page .new-quote-button{grid-column:2;justify-self:start;margin-top:8px}}
-@media(max-width:520px){.home-page .app-shell{padding:86px 18px 64px}.home-page .home-hero{padding-bottom:22px;margin-left:0}.home-page .home-hero h1{font-size:clamp(2.35rem,10vw,3.2rem)}.home-page .home-subtitle{max-width:330px;font-size:14px;line-height:1.5}.home-page .daily-guidance{margin-left:0}.home-page .guidance-meta{align-items:flex-start}.home-page .guidance-label{gap:7px;font-size:12px}.home-page .calendar-label{gap:5px;font-size:10px;text-align:right}.home-page .calendar-label>span:first-child{font-size:16px}.home-page .daily-guidance h2{margin-left:0;font-size:1.75rem}.home-page .guidance-chips{margin-left:0;gap:7px}.home-page .guidance-chip{padding:6px 9px;font-size:10px}.home-page .reflection-section{margin:28px 0 26px;gap:5px}.home-page .quote-copy blockquote{font-size:1.25rem}.home-page .quote-source{font-size:13px}.home-page .grounding-section{margin-left:0}.home-page .grounding-section h2{font-size:15px}.home-page .grounding-step{margin-left:0;gap:12px}.home-page .grounding-step p{font-size:13px}.home-page .landscape-sun{right:8%;top:11%;width:90px}}
+@media(min-width:1200px){.home-page .home-content{padding-top:2px}.home-page .reflection-section{margin-top:22px;margin-bottom:18px}}
+@media(max-width:760px){.home-page .app-shell{padding:88px 20px 28px}.home-page .foliage{font-size:clamp(76px,15vw,118px)}.home-page .foliage-left{left:-46px}.home-page .foliage-right{right:-46px}.home-page .reflection-section{grid-template-columns:28px minmax(0,1fr);margin-top:28px}.home-page .quote-mark{font-size:60px}.home-page .new-quote-button{grid-column:2;justify-self:start;margin-top:8px}}
+@media(max-width:520px){.home-page .app-shell{padding:82px 16px 24px}.home-page .home-content{max-width:none}.home-page .home-hero{padding-bottom:18px;margin-left:0}.home-page .home-hero h1{font-size:clamp(2.35rem,10vw,3.2rem)}.home-page .home-subtitle{max-width:330px;font-size:14px;line-height:1.5}.home-page .daily-guidance{margin-left:0}.home-page .guidance-meta{align-items:flex-start}.home-page .guidance-label{gap:7px;font-size:12px}.home-page .calendar-label{gap:5px;font-size:10px;text-align:right}.home-page .calendar-label>span:first-child{font-size:16px}.home-page .daily-guidance h2{margin-left:0;font-size:1.75rem}.home-page .guidance-chips{margin-left:0;gap:7px}.home-page .guidance-chip{padding:6px 9px;font-size:10px}.home-page .reflection-section{margin:28px 0 26px;gap:5px}.home-page .quote-copy blockquote{font-size:1.25rem}.home-page .quote-source{font-size:13px}.home-page .grounding-section{margin-left:0}.home-page .grounding-section h2{font-size:15px}.home-page .grounding-step{margin-left:0;gap:12px}.home-page .grounding-step p{font-size:13px}.home-page .landscape-sun{right:8%;top:11%;width:90px}}
 
 @media(prefers-reduced-motion:reduce){.home-page *{scroll-behavior:auto!important;transition:none!important}}
