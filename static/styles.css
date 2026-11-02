@@ -70,6 +70,248 @@ button, select, textarea { font: inherit; }
   font-size: 0.76rem;
 }
 
+/* Shared fixed navigation — available on every authenticated page. */
+.topbar {
+  position: fixed;
+  z-index: 30;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 28px);
+  max-width: 1480px;
+  min-height: 64px;
+  margin: 0;
+  padding: 8px 22px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  background: rgba(48, 62, 24, 0.97);
+  box-shadow: 0 8px 30px rgba(48, 62, 24, 0.12);
+  color: #fffdf5;
+}
+
+.brand {
+  flex: 1;
+  min-width: 0;
+  gap: 12px;
+  color: #fffdf5;
+}
+
+.brand-mark {
+  flex: 0 0 40px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: #fffaf0;
+  color: #40552b;
+  font-size: 24px;
+}
+
+.brand-copy {
+  padding-left: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.brand strong {
+  font-family: Georgia, serif;
+  font-size: 18px;
+  letter-spacing: 0.03em;
+}
+
+.brand small {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.topbar-nav {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.topbar-nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 17px;
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  border-radius: 999px;
+  color: #fffdf5;
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+  transition: background 0.18s, color 0.18s;
+}
+
+.topbar-nav a span {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.topbar-nav a:hover,
+.topbar-nav a.active {
+  border-color: #fffaf0;
+  background: #fffaf0;
+  color: #34451f;
+}
+
+.header-logout {
+  display: flex;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.signout-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: #dce69a;
+  color: #26351a;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.signout-button:hover {
+  background: #edf2bd;
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    min-height: 60px;
+    padding: 8px 13px;
+  }
+
+  .brand {
+    flex: 0 1 auto;
+    gap: 8px;
+  }
+
+  .brand-mark {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+  }
+
+  .brand-copy {
+    padding-left: 8px;
+  }
+
+  .brand strong {
+    font-size: 15px;
+  }
+
+  .brand small {
+    font-size: 9px;
+  }
+
+  .topbar-nav {
+    gap: 4px;
+  }
+
+  .topbar-nav a {
+    padding: 9px 10px;
+    font-size: 11px;
+  }
+
+  .topbar-nav a span {
+    font-size: 15px;
+  }
+
+  .header-logout {
+    flex: 0 0 auto;
+  }
+
+  .signout-button {
+    min-height: 36px;
+    padding: 0 12px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 520px) {
+  .topbar {
+    top: 7px;
+    width: calc(100% - 14px);
+    gap: 5px;
+    padding: 7px 10px;
+  }
+
+  .brand {
+    gap: 6px;
+  }
+
+  .brand-mark {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+    font-size: 19px;
+  }
+
+  .brand-copy {
+    padding-left: 6px;
+  }
+
+  .brand strong {
+    font-size: 12px;
+  }
+
+  .brand small {
+    font-size: 7px;
+  }
+
+  .topbar-nav {
+    gap: 2px;
+  }
+
+  .topbar-nav a {
+    gap: 3px;
+    padding: 8px 7px;
+    font-size: 9px;
+  }
+
+  .topbar-nav a span {
+    font-size: 12px;
+  }
+
+  .signout-button {
+    min-height: 31px;
+    padding: 0 8px;
+    font-size: 9px;
+  }
+
+  .signout-button span {
+    display: none;
+  }
+}
+
+@media (max-width: 370px) {
+  .brand small {
+    display: none;
+  }
+
+  .brand-copy {
+    border: 0;
+  }
+
+  .topbar-nav a {
+    padding: 8px 5px;
+  }
+
+  .topbar-nav a span {
+    display: none;
+  }
+
+  .signout-button {
+    padding: 0 7px;
+  }
+}
+
 .goal-form select {
   max-width: 132px;
   min-height: 40px;
