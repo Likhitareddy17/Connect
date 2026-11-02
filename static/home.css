@@ -2,7 +2,6 @@
   --home-ink: #282719;
   --home-olive: #354b20;
   --home-sage: #8fa36a;
-  --home-paper: #fbf7ee;
   --home-muted: #64624e;
 }
 
@@ -31,8 +30,7 @@
   min-height: calc(100svh - 138px);
 }
 
-/* Warm photographic atmosphere; the light is layered over the landscape,
-   rather than drawing flat CSS hills or a geometric sun. */
+/* Keep the photographic landscape and warm atmospheric light untouched. */
 .home-page .home-landscape {
   position: fixed;
   z-index: -2;
@@ -65,7 +63,7 @@
   pointer-events: none;
 }
 
-/* One shared glass surface spans the hero and daily guidance columns. */
+/* Unboxed editorial layout: content sits directly on the landscape. */
 .home-page .home-content {
   position: relative;
   display: grid;
@@ -73,25 +71,13 @@
   grid-template-rows: minmax(190px, auto) minmax(180px, 1fr) auto;
   align-items: center;
   column-gap: clamp(22px, 4vw, 58px);
-  row-gap: clamp(17px, 2.5vh, 28px);
+  row-gap: clamp(30px, 5vh, 58px);
   width: min(100%, 1260px);
   min-height: calc(100svh - 138px);
   margin: 0 auto;
 }
 
-.home-page .home-content::before {
-  content: "";
-  grid-column: 1 / -1;
-  grid-row: 1;
-  align-self: stretch;
-  z-index: 0;
-  border: 1px solid rgba(255, 255, 255, .54);
-  border-radius: 21px;
-  background: linear-gradient(135deg, rgba(255, 252, 243, .66), rgba(255, 248, 230, .43));
-  box-shadow: 0 14px 38px rgba(72, 68, 43, .10), inset 0 1px 0 rgba(255, 255, 255, .74);
-  -webkit-backdrop-filter: blur(13px) saturate(116%);
-  backdrop-filter: blur(13px) saturate(116%);
-}
+.home-page .home-content::before { content: none; }
 
 .home-page .home-hero,
 .home-page .daily-guidance,
@@ -100,6 +86,12 @@
   position: relative;
   z-index: 1;
   min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 .home-page .home-hero {
@@ -111,7 +103,7 @@
   justify-content: center;
   max-width: none;
   margin: 0;
-  padding: clamp(22px, 3vw, 38px);
+  padding: clamp(18px, 2.5vw, 30px) clamp(12px, 1.5vw, 20px);
 }
 
 .home-page .home-hero::before {
@@ -182,7 +174,7 @@
   justify-content: center;
   width: 100%;
   margin: 0;
-  padding: clamp(20px, 2.8vw, 34px);
+  padding: clamp(18px, 2.2vw, 28px) clamp(12px, 1.5vw, 20px);
 }
 
 .home-page .guidance-meta {
@@ -230,7 +222,7 @@
 .home-page .guidance-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 9px;
+  gap: 9px 18px;
   margin-left: 30px;
 }
 
@@ -238,24 +230,21 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 12px;
-  border: 1px solid rgba(111, 137, 77, .17);
-  border-radius: 999px;
-  background: rgba(245, 240, 218, .52);
+  padding: 4px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: #514f3d;
   font-size: 11px;
-  transition: transform .2s ease, background-color .2s ease, box-shadow .2s ease;
+  transition: color .2s ease, transform .2s ease;
 }
 
 .home-page .guidance-chip > span,
-.home-page .guidance-chip strong {
-  color: #405a2d;
-}
+.home-page .guidance-chip strong { color: #405a2d; }
 
 .home-page .guidance-chip:hover {
-  transform: translateY(-2px);
-  background: rgba(250, 246, 228, .78);
-  box-shadow: 0 7px 16px rgba(65, 76, 43, .09);
+  transform: translateY(-1px);
+  color: #354b20;
 }
 
 .home-page .reflection-section {
@@ -269,13 +258,18 @@
   min-height: 180px;
   margin: 0 auto;
   padding: clamp(22px, 3vw, 38px) clamp(22px, 4vw, 54px);
-  border: 1px solid rgba(255, 255, 255, .48);
-  border-radius: 20px;
-  background: linear-gradient(135deg, rgba(255, 253, 246, .61), rgba(255, 250, 237, .42));
-  box-shadow: 0 14px 38px rgba(72, 68, 43, .09), inset 0 1px 0 rgba(255, 255, 255, .72);
-  -webkit-backdrop-filter: blur(12px) saturate(114%);
-  backdrop-filter: blur(12px) saturate(114%);
   text-align: center;
+}
+
+.home-page .reflection-section::after {
+  content: "";
+  position: absolute;
+  bottom: -25px;
+  left: 50%;
+  width: min(180px, 24%);
+  height: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, transparent, rgba(112, 125, 83, .48), transparent);
 }
 
 .home-page .quote-mark {
@@ -319,26 +313,25 @@
   gap: 8px;
   align-self: center;
   min-height: 40px;
-  padding: 0 17px;
-  border: 1px solid rgba(255, 255, 255, .38);
-  border-radius: 999px;
-  background: linear-gradient(135deg, #87985e, #657c43);
-  color: #fffdf5;
+  padding: 4px 0 4px 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #405a2d;
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
-  box-shadow: 0 8px 20px rgba(53, 75, 32, .18);
-  transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+  box-shadow: none;
+  transition: color .2s ease, transform .2s ease;
 }
 
 .home-page .new-quote-button span:first-child { font-size: 17px; }
 .home-page .new-quote-button:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.06);
-  box-shadow: 0 12px 24px rgba(53, 75, 32, .22);
+  transform: translateY(-1px);
+  color: #263d19;
 }
-.home-page .new-quote-button:active { transform: translateY(0) scale(.98); }
+.home-page .new-quote-button:active { transform: translateY(0); }
 .home-page .new-quote-button:disabled { opacity: .68; cursor: wait; }
 
 .home-page .grounding-section {
@@ -350,13 +343,7 @@
   gap: clamp(18px, 3vw, 34px);
   width: min(100%, 1050px);
   margin: 0 auto;
-  padding: 16px clamp(20px, 3vw, 34px);
-  border: 1px solid rgba(255, 255, 255, .5);
-  border-radius: 19px;
-  background: linear-gradient(135deg, rgba(255, 253, 245, .64), rgba(255, 250, 236, .45));
-  box-shadow: 0 12px 32px rgba(72, 68, 43, .08), inset 0 1px 0 rgba(255, 255, 255, .72);
-  -webkit-backdrop-filter: blur(12px) saturate(114%);
-  backdrop-filter: blur(12px) saturate(114%);
+  padding: 18px clamp(20px, 3vw, 34px);
 }
 
 .home-page .grounding-section h2 {
@@ -382,7 +369,11 @@
   gap: 15px;
   min-height: 58px;
   padding-left: clamp(16px, 2.5vw, 30px);
+  border: 0;
   border-left: 1px solid rgba(91, 115, 62, .36);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .home-page .grounding-icon {
@@ -391,12 +382,12 @@
   width: 48px;
   height: 48px;
   flex: 0 0 48px;
-  border: 1px solid rgba(111, 137, 77, .12);
+  border: 0;
   border-radius: 50%;
-  background: rgba(225, 233, 197, .72);
+  background: transparent;
   color: #405a2d;
   font-size: 24px;
-  box-shadow: 0 5px 12px rgba(65, 76, 43, .08);
+  box-shadow: none;
 }
 
 .home-page .grounding-step h3 {
@@ -444,22 +435,15 @@
   .home-page .home-content {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto minmax(170px, auto) auto;
-    gap: 15px;
+    gap: 24px;
     min-height: auto;
   }
-  .home-page .home-content::before { display: none; }
   .home-page .home-hero,
   .home-page .daily-guidance,
   .home-page .reflection-section,
   .home-page .grounding-section {
     grid-column: 1;
     width: 100%;
-    border: 1px solid rgba(255, 255, 255, .5);
-    border-radius: 18px;
-    background: linear-gradient(135deg, rgba(255, 253, 246, .65), rgba(255, 250, 237, .46));
-    box-shadow: 0 12px 30px rgba(72, 68, 43, .08);
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
   }
   .home-page .home-hero { grid-row: 1; }
   .home-page .daily-guidance { grid-row: 2; }
@@ -471,9 +455,9 @@
 
 @media (max-width: 640px) {
   .home-page .app-shell { padding: 96px 14px 22px; }
-  .home-page .home-content { gap: 12px; }
+  .home-page .home-content { gap: 22px; }
   .home-page .home-hero,
-  .home-page .daily-guidance { padding: 19px 17px; }
+  .home-page .daily-guidance { padding: 16px 4px; }
   .home-page .home-hero h1 { font-size: clamp(1.8rem, 8vw, 2.4rem); }
   .home-page .home-subtitle { font-size: 13px; }
   .home-page .guidance-meta { align-items: flex-start; }
@@ -481,12 +465,12 @@
   .home-page .daily-guidance h2,
   .home-page .guidance-chips { margin-left: 0; }
   .home-page .daily-guidance h2 { font-size: 1.35rem; }
-  .home-page .guidance-chip { font-size: 10px; padding: 6px 9px; }
+  .home-page .guidance-chip { font-size: 10px; }
   .home-page .reflection-section {
     grid-template-columns: 27px minmax(0, 1fr);
     gap: 8px;
     min-height: 0;
-    padding: 21px 15px;
+    padding: 18px 4px;
   }
   .home-page .quote-mark { font-size: 52px; }
   .home-page .quote-copy blockquote { font-size: clamp(1.2rem, 5.4vw, 1.55rem); }
@@ -499,15 +483,14 @@
   .home-page .grounding-section {
     grid-template-columns: 1fr;
     gap: 11px;
-    padding: 16px 17px;
+    padding: 16px 4px;
   }
   .home-page .grounding-section h2 { font-size: 16px; }
   .home-page .grounding-step {
     min-height: 50px;
-    padding-left: 0;
+    padding: 10px 0 0;
     border-left: 0;
     border-top: 1px solid rgba(91, 115, 62, .28);
-    padding-top: 10px;
   }
   .home-page .grounding-icon { width: 42px; height: 42px; flex-basis: 42px; }
 }
