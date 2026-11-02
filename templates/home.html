@@ -2,47 +2,51 @@
 {% block title %}CONNECT · Home{% endblock %}
 {% block meta_description %}A gentle space for spiritual guidance, mental balance and emotional support.{% endblock %}
 {% block content %}
-<div class="home-landscape" aria-hidden="true">
-  <div class="landscape-sun"></div><div class="mountain mountain-back"></div><div class="mountain mountain-front"></div>
-  <div class="landscape-haze"></div>
-  <span class="foliage foliage-left">❧</span><span class="foliage foliage-right">❧</span>
-</div>
-<div class="home-content">
-  <section class="home-hero">
-    <p class="home-eyebrow">A MOMENT FOR YOU</p>
-    <h1>Today, return gently.</h1>
-    <p class="home-subtitle">A space for spiritual guidance, mental balance and emotional support.</p>
-  </section>
+<div class="home-landscape" aria-hidden="true"></div>
 
-  <section class="daily-guidance" aria-labelledby="guidance-heading">
-    <div class="guidance-meta">
-      <div class="guidance-label"><span aria-hidden="true">▣</span><strong>Today’s Guidance</strong></div>
-      <div class="calendar-label"><span aria-hidden="true">▦</span><span>{{ calendar_label or calendar_date }}</span></div>
+<div class="home-scene" aria-label="Your daily space for wellbeing">
+  <section class="scene-opening" aria-labelledby="home-heading">
+    <div class="opening-copy">
+      <p class="home-eyebrow"><span></span>A MOMENT FOR YOU</p>
+      <h1 id="home-heading">Today, return<br><em>gently.</em></h1>
+      <p class="home-subtitle">A little space to reconnect with what matters —<br class="desktop-break"> within you and around you.</p>
     </div>
-    <h2 id="guidance-heading">{{ guidance.focus }}</h2>
-    <div class="guidance-chips">
-      <span class="guidance-chip"><span aria-hidden="true">♡</span> Last check-in: <strong>{{ guidance.mood|capitalize }}</strong></span>
-      <span class="guidance-chip"><span aria-hidden="true">♧</span> Try: <strong>{{ guidance.action.title }}</strong></span>
-    </div>
+
+    <aside class="daily-guidance" aria-labelledby="guidance-heading">
+      <p class="guidance-kicker"><span aria-hidden="true">✧</span> YOUR DAY, IN BALANCE <span class="guidance-date">{{ calendar_label or calendar_date }}</span></p>
+      <h2 id="guidance-heading">{{ guidance.focus }}</h2>
+      <div class="guidance-details">
+        <p><span class="detail-symbol" aria-hidden="true">♡</span><span>Last check-in</span><strong>{{ guidance.mood|capitalize }}</strong></p>
+        <p><span class="detail-symbol" aria-hidden="true">↗</span><span>A gentle practice</span><strong>{{ guidance.action.title }}</strong></p>
+      </div>
+    </aside>
   </section>
 
   <section class="reflection-section" aria-labelledby="reflection-heading">
-    <div class="quote-mark" aria-hidden="true">“</div>
+    <p class="reflection-kicker" id="reflection-heading">A THOUGHT TO CARRY WITH YOU</p>
+    <div class="reflection-ornament" aria-hidden="true">“</div>
     <div class="quote-copy">
       <blockquote id="daily-quote">{{ quote.text }}</blockquote>
       <p class="quote-source" id="quote-source">{{ quote.source }}</p>
     </div>
     <button class="new-quote-button" id="new-quote" type="button">
-      <span aria-hidden="true">⟳</span> <span class="button-label">New Quote</span>
+      <span aria-hidden="true">⟳</span><span class="button-label">Another thought</span>
     </button>
     <p class="quote-status sr-only" id="quote-status" role="status" aria-live="polite"></p>
   </section>
 
   <section class="grounding-section" aria-labelledby="grounding-heading">
-    <h2 id="grounding-heading"><span aria-hidden="true">♧</span> One grounding step</h2>
+    <div class="grounding-heading">
+      <span class="grounding-flourish" aria-hidden="true">❧</span>
+      <h2 id="grounding-heading">Come back to this moment</h2>
+    </div>
     <div class="grounding-step">
-      <span class="grounding-icon" aria-hidden="true">♧</span>
-      <div><h3>{{ guidance.action.title }}</h3><p>{{ guidance.action.detail }}</p></div>
+      <span class="grounding-number" aria-hidden="true">01</span>
+      <div class="grounding-copy">
+        <h3>{{ guidance.action.title }}</h3>
+        <p>{{ guidance.action.detail }}</p>
+      </div>
+      <span class="grounding-endmark" aria-hidden="true">✧</span>
     </div>
   </section>
 </div>
@@ -58,7 +62,7 @@
   const label = button.querySelector(".button-label");
   button.addEventListener("click", async () => {
     button.disabled = true;
-    label.textContent = "Finding a reflection…";
+    label.textContent = "Finding a thought…";
     status.textContent = "Finding a reflection that matches your calendar.";
     try {
       const response = await fetch("{{ url_for('api_daily_quote') }}", {
@@ -75,7 +79,7 @@
       status.textContent = error.message || "Please try again in a moment.";
     } finally {
       button.disabled = false;
-      label.textContent = "New Quote";
+      label.textContent = "Another thought";
     }
   });
 })();
